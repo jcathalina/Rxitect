@@ -38,6 +38,7 @@
 </section>
 <section id="module-rxitect.models.vae">
 <span id="rxitect-models-vae-module"></span><h2>rxitect.models.vae module<a class="headerlink" href="#module-rxitect.models.vae" title="Permalink to this headline">¶</a></h2>
+<p>vae.py contains the definition of all Variational Auto-Encoder (VAE) models used in this project.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="rxitect.models.vae.VAEEncoder">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rxitect.models.vae.</span></span><span class="sig-name descname"><span class="pre">VAEEncoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_dimension</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_1d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_2d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_3d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latent_dimension</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rxitect.models.vae.VAEEncoder" title="Permalink to this definition">¶</a></dt>
@@ -58,12 +59,16 @@
 <dt class="sig sig-object py" id="rxitect.models.vae.VAEEncoder.reparameterize">
 <span class="sig-name descname"><span class="pre">reparameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">log_var</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.Tensor</span></span></span><a class="headerlink" href="#rxitect.models.vae.VAEEncoder.reparameterize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates the reparameterized latent space, this allows back-propogation
-despite the stochastic component in the network.
-:param mu: TODO
-:param log_var: TODO</p>
+despite the stochastic component in the network.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>The reparameterized latent vector</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mu</strong> – TODO</p></li>
+<li><p><strong>log_var</strong> – TODO</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The reparameterized latent vector</p>
 </dd>
 </dl>
 </dd></dl>
