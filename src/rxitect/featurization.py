@@ -7,6 +7,8 @@ import pandas as pd
 import selfies as sf
 from tqdm import tqdm
 
+
+logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -20,7 +22,7 @@ class SelfiesEncodings:
     longest_selfies_len: int
 
 
-def get_selfie_encodings_for_dataset(file_path: str) -> SelfiesEncodings:
+def generate_selfies_encodings(file_path: str) -> SelfiesEncodings:
     """
     Generates encoding, alphabet and length of largest molecule in
     SELFIES, given a file containing SMILES molecules.
@@ -49,7 +51,7 @@ def get_selfie_encodings_for_dataset(file_path: str) -> SelfiesEncodings:
 
     longest_selfies_len = max(sf.len_selfies(s) for s in selfies_list)
 
-    logging.info("Finished generating SEFLIES encodings...")
+    logger.info("Finished generating SEFLIES encodings...")
 
     encodings = SelfiesEncodings(
         selfies_list=selfies_list,

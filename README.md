@@ -4,7 +4,7 @@
 [![version](https://img.shields.io/github/v/release/naisuu/rxitect)](https://github.com/naisuu/rxitect/releases)
 
 Rxitect was created for the purpose of experimenting with the development and implementation of retrosynthesis engines within molecular generators for the goal of de novo drug design; the focus of [my Master's thesis](TODO).
-The code in this repository is based on [DrugEx v2](https://github.com/XuhanLiu/DrugEx), released by Xuhan Liu (First Author) and Gerard J.P. van Westen (Correspondent Author) on March 8th, 2021. The same license terms apply for this repository, and can be found in the LICENSE file.
+The code in this repository is based on [DrugEx](https://github.com/XuhanLiu/DrugEx), released by Xuhan Liu (First Author) and Gerard J.P. van Westen (Correspondent Author) on March 8th, 2021. The same license terms apply for this repository, and can be found in the LICENSE file.
 
 ## Getting started
 After cloning this repository, make sure you have a conda distribution installed. We recommend [miniforge](https://github.com/conda-forge/miniforge) for licensing reasons, but anaconda/miniconda will work as well.
@@ -31,4 +31,4 @@ To use DVC, run the following commands:
 - If you are developing on a mac, you may run into issues with xgboost. To fix this, you need to have cmake installed, which can be done by running the following commands (assuming you have brew installed): `brew install gcc@11`, followed by `brew install cmake`. Note that because RA Score has a hard dependency on tensorflow-gpu to run their pretrained models, development on a mac is currently limited to just the base functionality of Rxitect (unless you have a CUDA-compatible GPU).
 
 # Additional information
-The paper that accompanies the original DrugEx v2 code can be found [here](https://chemrxiv.org/engage/chemrxiv/article-details/60c75834469df47f67f455b9).
+The paper that accompanies the original DrugEx code can be found [here](https://chemrxiv.org/engage/chemrxiv/article-details/60c75834469df47f67f455b9).
