@@ -21,5 +21,6 @@ dependencies:
     - git+https://github.com/reymond-group/RAscore.git@master
     - pyprojroot
     - Sphinx
+    - sphinxcontrib-napoleon
     - isort
     - gym
