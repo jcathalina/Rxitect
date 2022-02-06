@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>rxitect package &#8212; Rxitect 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="rxitect-package">
+<h1>rxitect package<a class="headerlink" href="#rxitect-package" title="Permalink to this headline">¶</a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="rxitect.models.html">rxitect.models package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="rxitect.models.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rxitect.models.html#module-rxitect.models.vae">rxitect.models.vae module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rxitect.models.html#module-rxitect.models">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-rxitect.featurization">
+<span id="rxitect-featurization-module"></span><h2>rxitect.featurization module<a class="headerlink" href="#module-rxitect.featurization" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="rxitect.featurization.SelfiesEncodings">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">rxitect.featurization.</span></span><span class="sig-name descname"><span class="pre">SelfiesEncodings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">selfies_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selfies_vocab</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longest_selfies_len</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rxitect.featurization.SelfiesEncodings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class representing SELFIES encodings generated from a list of SMILES.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rxitect.featurization.SelfiesEncodings.longest_selfies_len">
+<span class="sig-name descname"><span class="pre">longest_selfies_len</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#rxitect.featurization.SelfiesEncodings.longest_selfies_len" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rxitect.featurization.SelfiesEncodings.selfies_list">
+<span class="sig-name descname"><span class="pre">selfies_list</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#rxitect.featurization.SelfiesEncodings.selfies_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="rxitect.featurization.SelfiesEncodings.selfies_vocab">
+<span class="sig-name descname"><span class="pre">selfies_vocab</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#rxitect.featurization.SelfiesEncodings.selfies_vocab" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="rxitect.featurization.generate_selfies_encodings">
+<span class="sig-prename descclassname"><span class="pre">rxitect.featurization.</span></span><span class="sig-name descname"><span class="pre">generate_selfies_encodings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#rxitect.featurization.SelfiesEncodings" title="rxitect.featurization.SelfiesEncodings"><span class="pre">rxitect.featurization.SelfiesEncodings</span></a></span></span><a class="headerlink" href="#rxitect.featurization.generate_selfies_encodings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates encoding, alphabet and length of largest molecule in
+SELFIES, given a file containing SMILES molecules.
+:param file_path: path to csv file with SMILES column. Column’s name must be ‘smiles’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A collection of SELFIES encodings generated from a list of SMILES.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#rxitect.featurization.SelfiesEncodings" title="rxitect.featurization.SelfiesEncodings">SelfiesEncodings</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-rxitect.main">
+<span id="rxitect-main-module"></span><h2>rxitect.main module<a class="headerlink" href="#module-rxitect.main" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-rxitect">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-rxitect" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Rxitect</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Julius Cathalina.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/rxitect.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
