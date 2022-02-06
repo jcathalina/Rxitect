@@ -7,7 +7,6 @@ import pandas as pd
 import selfies as sf
 from tqdm import tqdm
 
-
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -15,7 +14,7 @@ logger.setLevel(logging.INFO)
 
 @dataclass(frozen=True)
 class SelfiesEncodings:
-    """A collection of SELFIES encodings generated from a list of SMILES."""
+    """A class representing SELFIES encodings generated from a list of SMILES."""
 
     selfies_list: List[str]
     selfies_vocab: List[str]
