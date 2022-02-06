@@ -2,5 +2,6 @@
 .ipynb_checkpoints
 __pycache__
 
-# test data
+# test data and related cache files
 test_smiles.txt
+.pytest*

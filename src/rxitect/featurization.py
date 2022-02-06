@@ -1,3 +1,5 @@
+"""featurization.py contains all code related to generating features from SMILES data to be used for training."""
+
 import logging
 from dataclasses import dataclass
 from typing import List

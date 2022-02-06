@@ -1,3 +1,5 @@
+"""vae.py contains the definition of all Variational Auto-Encoder (VAE) models used in this project."""
+
 from typing import Tuple
 
 import torch
@@ -8,6 +10,7 @@ class VAEEncoder(nn.Module):
     def __init__(self, in_dimension, layer_1d, layer_2d, layer_3d, latent_dimension):
         """
         Fully Connected layers to encode SELFIES repr. molecule to latent space
+
         Args:
             in_dimension: TODO
             layer_1d: TODO
@@ -38,9 +41,11 @@ class VAEEncoder(nn.Module):
         """
         Calculates the reparameterized latent space, this allows back-propogation
         despite the stochastic component in the network.
+
         Args:
             mu: TODO
             log_var: TODO
+
         Returns:
             The reparameterized latent vector
         """

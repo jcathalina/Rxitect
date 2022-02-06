@@ -20,7 +20,7 @@ dependencies:
   - pip:
     - git+https://github.com/reymond-group/RAscore.git@master
     - pyprojroot
-    - Sphinx
-    - sphinxcontrib-napoleon
+    - Sphinx=4.4.0
+    - sphinxcontrib-napoleon=0.7
     - isort
     - gym
