@@ -27,7 +27,8 @@ To use DVC, run the following commands:
 
 
 # Known development issues
-- black requires specific versions of typing-extensions, so you may need to run ```pip install typing-extensions --upgrade``` first.
+- black requires specific versions of typing-extensions, so you may need to run `pip install typing-extensions --upgrade` first.
+- If you are developing on windows, we recommend to download pytorch manually to fit your needs, e.g.: `mamba install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch`.
 - If you are developing on a mac, you may run into issues with xgboost. To fix this, you need to have cmake installed, which can be done by running the following commands (assuming you have brew installed): `brew install gcc@11`, followed by `brew install cmake`. Note that because RA Score has a hard dependency on tensorflow-gpu to run their pretrained models, development on a mac is currently limited to just the base functionality of Rxitect (unless you have a CUDA-compatible GPU).
 - there's a recent (as of February 7, 2022) bug in rdkit where you could not import it or its modules properly if you have `boost-cpp=1.74.0=h359cf19_6`. If you run into this issue, update it by conda/mamba installing boost-cpp again.
 
