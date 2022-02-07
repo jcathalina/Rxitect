@@ -1,8 +1,9 @@
 """featurization.py contains all code related to generating features from SMILES data to be used for training."""
 
+import dataclasses
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import Iterable, List
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,9 @@ class SelfiesEncodings:
     selfies_list: List[str]
     selfies_vocab: List[str]
     longest_selfies_len: int
+
+    def __iter__(self) -> Iterable:
+        return iter(dataclasses.astuple(self))
 
 
 def generate_selfies_encodings(file_path: str) -> SelfiesEncodings:
