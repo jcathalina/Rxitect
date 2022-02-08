@@ -1,57 +1,292 @@
-from typing import List
-
+from dataclasses import dataclass
+import dataclasses
+from typing import Iterator, List, Tuple
 import numpy as np
+import rdkit
 import selfies as sf
-from tqdm import tqdm
+from rdkit import Chem, RDLogger
+from rdkit.Chem import AllChem, Mol, MolFromSmiles, MolToSmiles
+from rdkit.Chem.AtomPairs.Sheridan import GetBPFingerprint, GetBTFingerprint
+from rdkit.Chem.Pharm2D import Generate, Gobbi_Pharm2D
+from rdkit.DataStructs.cDataStructs import TanimotoSimilarity
+
+RDLogger.DisableLog("rdApp.*")
 
 
-def _single_selfies_to_onehot(
-    selfies: str, selfies_vocab: List[str], longest_selfies_len: int
-) -> np.ndarray:
-    """
-    Helper function to one-hot encode a single SELFIES repr. molecule.
-    """
-    symbol_to_int = dict((c, i) for i, c in enumerate(selfies_vocab))
-
-    # pad with [nop]
-    selfies += "[nop]" * (longest_selfies_len - sf.len_selfies(selfies))
-
-    # integer encode
-    symbol_list = sf.split_selfies(selfies)
-    integer_encoded = [symbol_to_int[symbol] for symbol in symbol_list]
-
-    # one hot-encode the integer encoded selfie
-    onehot_encoded = list()
-    for index in integer_encoded:
-        letter = [0] * len(selfies_vocab)
-        letter[index] = 1
-        onehot_encoded.append(letter)
-
-    return np.array(onehot_encoded)
-
-
-def selfies_to_onehot(
-    selfies_list: List[str], selfies_vocab: List[str], longest_selfies_len: int
-) -> np.ndarray:
-    """
-    Convert a list of SELFIES strings to their one-hot encoding.
+@dataclass(frozen=True)
+class SanitizedSmiles:
+    """A helper class containing information about a sanitized smile string.
 
     Args:
-        selfies_list: TODO
-        selfies_vocab: TODO
-        longest_selfies_len: TODO
+        mol: RdKit mol object (None if invalid smile string smi)
+        smi_canon: Canonicalized SMILES representation of smi (None if invalid smile string smi)
+        conversion_successful: True/False to indicate if conversion was  successful
+    """
+
+    mol: Mol
+    canon_smi: str
+    success: bool
+
+    def __iter__(self) -> Iterator:
+        return iter(dataclasses.astuple(self))
+
+
+def randomize_smiles(mol: Mol) -> str:
+    """Returns a random (dearomatized) SMILES given an rdkit Mol representation of a molecule.
+
+    Args:
+        mol: RdKit mol object (None if invalid smile string smi)
 
     Returns:
-        np.ndarray: An array representing the onehot encoded vectors of a list of SELFIES.
+        mol: RdKit mol object  (None if invalid smile string smi)
     """
-    onehot_encoding = [
-        _single_selfies_to_onehot(
-            selfies=s,
-            selfies_vocab=selfies_vocab,
-            longest_selfies_len=longest_selfies_len,
-        )
-        for s in tqdm(selfies_list, desc="Converting SELFIES to one-hot encoding.")
-    ]
-    onehot_encoding = np.array(onehot_encoding)
+    if not mol:
+        return None
 
-    return onehot_encoding
+    Chem.Kekulize(mol)
+    return rdkit.Chem.MolToSmiles(
+        mol, canonical=False, doRandom=True, isomericSmiles=False, kekuleSmiles=True
+    )
+
+
+def sanitize_smiles(smi: str) -> SanitizedSmiles:
+    """Compute a canonical SMILES representation of smi, along with Mol and success data.
+
+    Args:
+        smi: smiles string to be canonicalized
+
+    Returns:
+        SanitizedSmiles: a canonical SMILES representation with Mol and success data.
+    """
+    try:
+        mol = MolFromSmiles(smi, sanitize=True)
+        canon_smi = MolToSmiles(mol, isomericSmiles=False, canonical=True)
+        return SanitizedSmiles(mol=mol, canon_smi=canon_smi, success=True)
+    except:
+        return SanitizedSmiles(mol=None, canon_smi=None, success=False)
+
+
+def get_selfie_chars(selfie: str) -> List[str]:
+    """Obtain a list of all selfie characters in string selfie
+    Example:
+    >>> get_selfie_chars('[C][=C][C][=C][C][=C][Ring1][Branch1_1]')
+    ['[C]', '[=C]', '[C]', '[=C]', '[C]', '[=C]', '[Ring1]', '[Branch1_1]']
+
+    Args:
+        selfie: A selfie string - representing a molecule
+
+    Returns:
+        chars_selfie: list of selfie characters present in molecule selfie
+    """
+    chars_selfie = []  # A list of all SELFIE sybols from string selfie
+    while selfie != "":
+        chars_selfie.append(selfie[selfie.find("[") : selfie.find("]") + 1])
+        selfie = selfie[selfie.find("]") + 1 :]
+    return chars_selfie
+
+
+class _FingerprintCalculator:
+    """Calculate the fingerprint for a molecule, given the fingerprint type
+
+    Args:
+        mol: RdKit mol object (None if invalid smile string smi)
+        fp_type: Fingerprint type  (choices: AP/PHCO/BPF,BTF,PAT,ECFP4,ECFP6,FCFP4,FCFP6)
+
+    Returns:
+        RDKit fingerprint object
+    """
+
+    def get_fingerprint(self, mol: Mol, fp_type: str):
+        method_name = "get_" + fp_type
+        method = getattr(self, method_name)
+        if method is None:
+            raise Exception(f"{fp_type} is not a supported fingerprint type.")
+        return method(mol)
+
+    def get_AP(self, mol: Mol):
+        return AllChem.GetAtomPairFingerprint(mol, maxLength=10)
+
+    def get_PHCO(self, mol: Mol):
+        return Generate.Gen2DFingerprint(mol, Gobbi_Pharm2D.factory)
+
+    def get_BPF(self, mol: Mol):
+        return GetBPFingerprint(mol)
+
+    def get_BTF(self, mol: Mol):
+        return GetBTFingerprint(mol)
+
+    def get_PATH(self, mol: Mol):
+        return AllChem.RDKFingerprint(mol)
+
+    def get_ECFP4(self, mol: Mol):
+        return AllChem.GetMorganFingerprint(mol, 2)
+
+    def get_ECFP6(self, mol: Mol):
+        return AllChem.GetMorganFingerprint(mol, 3)
+
+    def get_FCFP4(self, mol: Mol):
+        return AllChem.GetMorganFingerprint(mol, 2, useFeatures=True)
+
+    def get_FCFP6(self, mol: Mol):
+        return AllChem.GetMorganFingerprint(mol, 3, useFeatures=True)
+
+
+def get_fingerprint(mol: Mol, fp_type: str):
+    """Fingerprint getter method. Fingerprint is returned after using object of
+        class '_FingerprintCalculator'
+
+    Parameters:
+        mol (rdkit.Chem.rdchem.Mol) : RdKit mol object (None if invalid smile string smi)
+        fp_type (string)            :Fingerprint type  (choices: AP/PHCO/BPF,BTF,PAT,ECFP4,ECFP6,FCFP4,FCFP6)
+    Returns:
+        RDKit fingerprint object
+
+    """
+    return _FingerprintCalculator().get_fingerprint(mol=mol, fp_type=fp_type)
+
+
+def mutate_selfie(selfie, max_molecules_len, write_fail_cases=False):
+    """Return a mutated selfie string (only one mutation on slefie is performed)
+
+    Mutations are done until a valid molecule is obtained
+    Rules of mutation: With a 33.3% propbabily, either:
+        1. Add a random SELFIE character in the string
+        2. Replace a random SELFIE character with another
+        3. Delete a random character
+
+    Parameters:
+    selfie            (string)  : SELFIE string to be mutated
+    max_molecules_len (int)     : Mutations of SELFIE string are allowed up to this length
+    write_fail_cases  (bool)    : If true, failed mutations are recorded in "selfie_failure_cases.txt"
+
+    Returns:
+    selfie_mutated    (string)  : Mutated SELFIE string
+    smiles_canon      (string)  : canonical smile of mutated SELFIE string
+    """
+    valid = False
+    fail_counter = 0
+    chars_selfie = get_selfie_chars(selfie)
+
+    while not valid:
+        fail_counter += 1
+
+        alphabet = list(sf.get_semantic_robust_alphabet())  # 34 SELFIE characters
+
+        choice_ls = [1, 2, 3]  # 1=Insert; 2=Replace; 3=Delete
+        random_choice = np.random.choice(choice_ls, 1)[0]
+
+        # Insert a character in a Random Location
+        if random_choice == 1:
+            random_index = np.random.randint(len(chars_selfie) + 1)
+            random_character = np.random.choice(alphabet, size=1)[0]
+
+            selfie_mutated_chars = (
+                chars_selfie[:random_index]
+                + [random_character]
+                + chars_selfie[random_index:]
+            )
+
+        # Replace a random character
+        elif random_choice == 2:
+            random_index = np.random.randint(len(chars_selfie))
+            random_character = np.random.choice(alphabet, size=1)[0]
+            if random_index == 0:
+                selfie_mutated_chars = [random_character] + chars_selfie[
+                    random_index + 1 :
+                ]
+            else:
+                selfie_mutated_chars = (
+                    chars_selfie[:random_index]
+                    + [random_character]
+                    + chars_selfie[random_index + 1 :]
+                )
+
+        # Delete a random character
+        elif random_choice == 3:
+            random_index = np.random.randint(len(chars_selfie))
+            if random_index == 0:
+                selfie_mutated_chars = chars_selfie[random_index + 1 :]
+            else:
+                selfie_mutated_chars = (
+                    chars_selfie[:random_index] + chars_selfie[random_index + 1 :]
+                )
+
+        else:
+            raise Exception("Invalid Operation trying to be performed")
+
+        selfie_mutated = "".join(x for x in selfie_mutated_chars)
+        sf = "".join(x for x in chars_selfie)
+
+        try:
+            smiles = sf.decoder(selfie_mutated)
+            mol, smiles_canon, done = sanitize_smiles(smiles)
+            if len(selfie_mutated_chars) > max_molecules_len or smiles_canon == "":
+                done = False
+            if done:
+                valid = True
+            else:
+                valid = False
+        except:
+            valid = False
+            if fail_counter > 1 and write_fail_cases == True:
+                f = open("selfie_failure_cases.txt", "a+")
+                f.write(
+                    "Tried to mutate SELFIE: "
+                    + str(sf)
+                    + " To Obtain: "
+                    + str(selfie_mutated)
+                    + "\n"
+                )
+                f.close()
+
+    return (selfie_mutated, smiles_canon)
+
+
+def get_mutated_SELFIES(selfies_ls, num_mutations):
+    """Mutate all the SELFIES in 'selfies_ls' 'num_mutations' number of times.
+
+    Parameters:
+    selfies_ls   (list)  : A list of SELFIES
+    num_mutations (int)  : number of mutations to perform on each SELFIES within 'selfies_ls'
+
+    Returns:
+    selfies_ls   (list)  : A list of mutated SELFIES
+
+    """
+    for _ in range(num_mutations):
+        selfie_ls_mut_ls = []
+        for str_ in selfies_ls:
+
+            str_chars = get_selfie_chars(str_)
+            max_molecules_len = len(str_chars) + num_mutations
+
+            selfie_mutated, _ = mutate_selfie(str_, max_molecules_len)
+            selfie_ls_mut_ls.append(selfie_mutated)
+
+        selfies_ls = selfie_ls_mut_ls.copy()
+    return selfies_ls
+
+
+def get_fp_scores(smiles_back, target_smi, fp_type):
+    """Calculate the Tanimoto fingerprint (using fp_type fingerint) similarity between a list
+       of SMILES and a known target structure (target_smi).
+
+    Parameters:
+    smiles_back   (list) : A list of valid SMILES strings
+    target_smi (string)  : A valid SMILES string. Each smile in 'smiles_back' will be compared to this stucture
+    fp_type (string)     : Type of fingerprint  (choices: AP/PHCO/BPF,BTF,PAT,ECFP4,ECFP6,FCFP4,FCFP6)
+
+    Returns:
+    smiles_back_scores (list of floats) : List of fingerprint similarities
+    """
+    smiles_back_scores = []
+    target = Chem.MolFromSmiles(target_smi)
+
+    fp_target = get_fingerprint(target, fp_type)
+
+    for item in smiles_back:
+        mol = Chem.MolFromSmiles(item)
+        fp_mol = get_fingerprint(mol, fp_type)
+        score = TanimotoSimilarity(fp_mol, fp_target)
+        smiles_back_scores.append(score)
+    return smiles_back_scores
