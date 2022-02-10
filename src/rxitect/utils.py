@@ -1,6 +1,7 @@
-from dataclasses import dataclass
 import dataclasses
+from dataclasses import dataclass
 from typing import Iterator, List, Tuple
+
 import numpy as np
 import rdkit
 import selfies as sf
@@ -146,7 +147,9 @@ def get_fingerprint(mol: Mol, fp_type: str):
     return _FingerprintCalculator().get_fingerprint(mol=mol, fp_type=fp_type)
 
 
-def mutate_selfie(selfie: str, max_molecules_len: int, write_fail_cases: bool = False) -> Tuple[str, str]:
+def mutate_selfie(
+    selfie: str, max_molecules_len: int, write_fail_cases: bool = False
+) -> Tuple[str, str]:
     """Return a mutated selfie string (only one mutation on selfie is performed)
        Mutations are done until a valid molecule is obtained
        Rules of mutation: With a 33.3% propbabily, either:

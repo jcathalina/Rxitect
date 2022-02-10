@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from rdkit import Chem
 
+
 class Vocabulary:
     """
     A class for handling encoding/decoding from SMILES to an array of indices

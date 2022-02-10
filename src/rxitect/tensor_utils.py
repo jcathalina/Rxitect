@@ -1,11 +1,12 @@
 from typing import Union
+
 import numpy as np
 import torch
 
 
 def unique(arr: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
     """Finds unique rows in arr and return their indices
-    
+
     Args:
         arr: a tensor containing all generated encoded SMILES
     Returns:
