@@ -1,0 +1,16 @@
+data:
+  name: Celecoxib
+  smiles: CC1=CC=C(C=C1)C2=CC(=NN2C3=CC=C(C=C3)S(=O)(=O)N)C(F)(F)F
+  fp_type: ECFP4
+
+params:
+  n_random_samples: 1000
+  n_mutations:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+  
+
+

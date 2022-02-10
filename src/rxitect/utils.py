@@ -13,7 +13,7 @@ from rdkit.DataStructs.cDataStructs import TanimotoSimilarity
 RDLogger.DisableLog("rdApp.*")
 
 
-@dataclass(frozen=True)
+@dataclass(order=True, frozen=True)
 class SanitizedSmiles:
     """A helper class containing information about a sanitized smile string.
 
@@ -133,11 +133,12 @@ class _FingerprintCalculator:
 
 def get_fingerprint(mol: Mol, fp_type: str):
     """Fingerprint getter method. Fingerprint is returned after using object of
-        class '_FingerprintCalculator'
+    class '_FingerprintCalculator'
 
-    Parameters:
-        mol (rdkit.Chem.rdchem.Mol) : RdKit mol object (None if invalid smile string smi)
-        fp_type (string)            :Fingerprint type  (choices: AP/PHCO/BPF,BTF,PAT,ECFP4,ECFP6,FCFP4,FCFP6)
+    Args:
+        mol: RdKit mol object (None if invalid smile string smi)
+        fp_type: Fingerprint type (choices: AP/PHCO/BPF,BTF,PAT,ECFP4,ECFP6,FCFP4,FCFP6)
+
     Returns:
         RDKit fingerprint object
 
@@ -145,23 +146,22 @@ def get_fingerprint(mol: Mol, fp_type: str):
     return _FingerprintCalculator().get_fingerprint(mol=mol, fp_type=fp_type)
 
 
-def mutate_selfie(selfie, max_molecules_len, write_fail_cases=False):
-    """Return a mutated selfie string (only one mutation on slefie is performed)
-
-    Mutations are done until a valid molecule is obtained
-    Rules of mutation: With a 33.3% propbabily, either:
+def mutate_selfie(selfie: str, max_molecules_len: int, write_fail_cases: bool = False) -> Tuple[str, str]:
+    """Return a mutated selfie string (only one mutation on selfie is performed)
+       Mutations are done until a valid molecule is obtained
+       Rules of mutation: With a 33.3% propbabily, either:
         1. Add a random SELFIE character in the string
         2. Replace a random SELFIE character with another
         3. Delete a random character
 
-    Parameters:
-    selfie            (string)  : SELFIE string to be mutated
-    max_molecules_len (int)     : Mutations of SELFIE string are allowed up to this length
-    write_fail_cases  (bool)    : If true, failed mutations are recorded in "selfie_failure_cases.txt"
+    Args:
+        selfie: SELFIE string to be mutated
+        max_molecules_len: Mutations of SELFIE string are allowed up to this length
+        write_fail_cases: If true, failed mutations are recorded in "selfie_failure_cases.txt"
 
     Returns:
-    selfie_mutated    (string)  : Mutated SELFIE string
-    smiles_canon      (string)  : canonical smile of mutated SELFIE string
+        mut_selfie: Mutated SELFIE string
+        canon_smi: canonical smile of mutated SELFIE string
     """
     valid = False
     fail_counter = 0
@@ -214,13 +214,13 @@ def mutate_selfie(selfie, max_molecules_len, write_fail_cases=False):
         else:
             raise Exception("Invalid Operation trying to be performed")
 
-        selfie_mutated = "".join(x for x in selfie_mutated_chars)
-        sf = "".join(x for x in chars_selfie)
+        mut_selfie = "".join(x for x in selfie_mutated_chars)
+        orig_selfie = "".join(x for x in chars_selfie)
 
         try:
-            smiles = sf.decoder(selfie_mutated)
-            mol, smiles_canon, done = sanitize_smiles(smiles)
-            if len(selfie_mutated_chars) > max_molecules_len or smiles_canon == "":
+            smiles = sf.decoder(mut_selfie)
+            _mol, canon_smi, done = sanitize_smiles(smiles)
+            if len(selfie_mutated_chars) > max_molecules_len or canon_smi == "":
                 done = False
             if done:
                 valid = True
@@ -232,52 +232,51 @@ def mutate_selfie(selfie, max_molecules_len, write_fail_cases=False):
                 f = open("selfie_failure_cases.txt", "a+")
                 f.write(
                     "Tried to mutate SELFIE: "
-                    + str(sf)
+                    + str(orig_selfie)
                     + " To Obtain: "
-                    + str(selfie_mutated)
+                    + str(mut_selfie)
                     + "\n"
                 )
                 f.close()
 
-    return (selfie_mutated, smiles_canon)
+    return (mut_selfie, canon_smi)
 
 
-def get_mutated_SELFIES(selfies_ls, num_mutations):
-    """Mutate all the SELFIES in 'selfies_ls' 'num_mutations' number of times.
+def get_mutated_selfies(selfies: List[str], num_mutations: int) -> List[str]:
+    """Mutates all the SELFIES in 'selfies' 'num_mutations' number of times.
 
-    Parameters:
-    selfies_ls   (list)  : A list of SELFIES
-    num_mutations (int)  : number of mutations to perform on each SELFIES within 'selfies_ls'
+    Args:
+        selfies: A list of SELFIES
+        num_mutations: number of mutations to perform on each selfie within 'selfies'
 
     Returns:
-    selfies_ls   (list)  : A list of mutated SELFIES
-
+        selfies: A list of mutated SELFIES
     """
     for _ in range(num_mutations):
         selfie_ls_mut_ls = []
-        for str_ in selfies_ls:
+        for selfie in selfies:
 
-            str_chars = get_selfie_chars(str_)
-            max_molecules_len = len(str_chars) + num_mutations
+            selfie_chars = get_selfie_chars(selfie)
+            max_molecules_len = len(selfie_chars) + num_mutations
 
-            selfie_mutated, _ = mutate_selfie(str_, max_molecules_len)
+            selfie_mutated, _ = mutate_selfie(selfie, max_molecules_len)
             selfie_ls_mut_ls.append(selfie_mutated)
 
-        selfies_ls = selfie_ls_mut_ls.copy()
-    return selfies_ls
+        selfies = selfie_ls_mut_ls.copy()
+    return selfies
 
 
-def get_fp_scores(smiles_back, target_smi, fp_type):
+def get_fp_scores(smiles_back: List[str], target_smi: str, fp_type: str):
     """Calculate the Tanimoto fingerprint (using fp_type fingerint) similarity between a list
        of SMILES and a known target structure (target_smi).
 
-    Parameters:
-    smiles_back   (list) : A list of valid SMILES strings
-    target_smi (string)  : A valid SMILES string. Each smile in 'smiles_back' will be compared to this stucture
-    fp_type (string)     : Type of fingerprint  (choices: AP/PHCO/BPF,BTF,PAT,ECFP4,ECFP6,FCFP4,FCFP6)
+    Args:
+        smiles_back: A list of valid SMILES strings
+        target_smi: A valid SMILES string. Each smile in 'smiles_back' will be compared to this stucture
+        fp_type: Type of fingerprint  (choices: AP/PHCO/BPF,BTF,PAT,ECFP4,ECFP6,FCFP4,FCFP6)
 
     Returns:
-    smiles_back_scores (list of floats) : List of fingerprint similarities
+        smiles_back_scores (list of floats) : List of fingerprint similarities
     """
     smiles_back_scores = []
     target = Chem.MolFromSmiles(target_smi)

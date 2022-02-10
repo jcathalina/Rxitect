@@ -12,18 +12,18 @@ Subpackages
 Submodules
 ----------
 
-rxitect.featurization module
-----------------------------
-
-.. automodule:: rxitect.featurization
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 rxitect.main module
 -------------------
 
 .. automodule:: rxitect.main
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+rxitect.utils module
+--------------------
+
+.. automodule:: rxitect.utils
    :members:
    :undoc-members:
    :show-inheritance:
