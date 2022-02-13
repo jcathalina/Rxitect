@@ -4,6 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.7
+  - pip
   - tqdm
   - scikit-learn=0.22.1
   - numpy
@@ -14,6 +15,7 @@ dependencies:
   - rdkit
   - matplotlib
   - selfies
+  - dvc
   - pip:
     - git+https://github.com/reymond-group/RAscore.git@master
     - pyprojroot
@@ -22,4 +24,5 @@ dependencies:
     - isort
     - gym
     - PyYAML
+    - pytorch-lightning
 # Remember to download pytorch manually!

@@ -1,0 +1,4 @@
+outs:
+- md5: 8156f2eed8d99a2da750f912eabb341e
+  size: 614155582
+  path: chembl_26.sdf.gz

@@ -5,3 +5,6 @@ __pycache__
 # test data and related cache files
 test_smiles.txt
 .pytest*
+.idea
+.vscode
+lightning_logs

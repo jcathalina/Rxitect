@@ -1,0 +1,27 @@
+stages:
+  pretrain_selfies_lstm:
+    cmd: python src/rxitect/training/pretrain_selfies_lstm.py
+    deps:
+    - data/processed/selfies_chembl_corpus.csv
+    - data/processed/selfies_ligand_corpus.csv
+    - data/processed/selfies_voc.txt
+    outs:
+    - models/pretrained_selfies_lstm.ckpt
+  featurization:
+    cmd: python src/rxitect/features/featurize_selfies.py
+    deps:
+    - data/processed/smiles_chembl_corpus.txt
+    - data/processed/smiles_ligand_corpus.txt
+    outs:
+    - data/processed/selfies_chembl_corpus.csv
+    - data/processed/selfies_ligand_corpus.csv
+    - data/processed/selfies_voc.txt
+  generate_smiles_corpora:
+    cmd: python src/rxitect/features/generate_smiles_corpora.py
+    deps:
+    - data/raw/chembl_26.sdf.gz
+    - data/raw/ligand_raw.tsv
+    outs:
+    - data/processed/smiles_chembl_corpus.txt
+    - data/processed/smiles_ligand_corpus.txt
+    - data/processed/smiles_voc.txt

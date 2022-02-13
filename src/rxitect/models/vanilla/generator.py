@@ -5,12 +5,17 @@ from torch import optim
 
 from globals import device
 from rxitect import tensor_utils
-from rxitect.structs.vocabulary import Vocabulary
+from rxitect.structs.vocabulary import SelfiesVocabulary
 
 
 class Generator(nn.Module):
     def __init__(
-        self, voc: Vocabulary, embed_size=128, hidden_size=512, is_lstm=True, lr=1e-3
+        self,
+        voc: SelfiesVocabulary,
+        embed_size=128,
+        hidden_size=512,
+        is_lstm=True,
+        lr=1e-3,
     ):
         super(Generator, self).__init__()
         self.voc = voc

@@ -8,6 +8,7 @@ import selfies as sf
 from rdkit import Chem, RDLogger
 from rdkit.Chem import AllChem, Mol, MolFromSmiles, MolToSmiles
 from rdkit.Chem.AtomPairs.Sheridan import GetBPFingerprint, GetBTFingerprint
+from rdkit.Chem.MolStandardize import rdMolStandardize
 from rdkit.Chem.Pharm2D import Generate, Gobbi_Pharm2D
 from rdkit.DataStructs.cDataStructs import TanimotoSimilarity
 
@@ -292,3 +293,19 @@ def get_fp_scores(smiles_back: List[str], target_smi: str, fp_type: str):
         score = TanimotoSimilarity(fp_mol, fp_target)
         smiles_back_scores.append(score)
     return smiles_back_scores
+
+
+def clean_mol(smiles: str, is_isomeric: bool = False) -> str:
+    """Removes charges from SMILES string
+    Args:
+        smiles: SMILES string repr. of a molecule.
+        is_isomeric: Determines if SMILES should be isomeric, false by default.
+    Returns:
+        cleaned SMILES (uncharged largest fragment), or empty string on invalid Mol.
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    mol = rdMolStandardize.ChargeParent(mol)
+    if mol is not None:
+        return Chem.MolToSmiles(mol, isomericSmiles=is_isomeric)
+    else:
+        return ""

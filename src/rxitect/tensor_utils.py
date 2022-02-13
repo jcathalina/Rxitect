@@ -1,4 +1,5 @@
 from typing import Union
+from torch.utils.data.dataset import Dataset, random_split
 
 import numpy as np
 import torch
@@ -22,3 +23,18 @@ def unique(arr: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
     if type(arr) == torch.Tensor:
         idxs = torch.LongTensor(idxs).to(arr.get_device())
     return idxs
+
+
+def random_split_frac(dataset: Dataset, train_frac: float = 0.9, val_frac: float = 0.1):
+    """
+    Helper wrapper function around PyTorch's random_split method that allows you to pass
+    fractions instead of integers.
+    """
+    if train_frac + val_frac != 1:
+        raise ValueError("The fractions have to add up to 1.")
+
+    dataset_size = len(dataset)
+
+    len_1 = int(np.floor(train_frac * dataset_size))
+    len_2 = dataset_size - len_1
+    return random_split(dataset=dataset, lengths=[len_1, len_2])
