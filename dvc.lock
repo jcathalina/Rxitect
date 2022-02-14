@@ -1,0 +1,21 @@
+schema: '2.0'
+stages:
+  generate_smiles_corpora:
+    cmd: python src/rxitect/features/generate_smiles_corpora.py
+    deps:
+    - path: data/raw/chembl_26.sdf.gz
+      md5: 8156f2eed8d99a2da750f912eabb341e
+      size: 614155582
+    - path: data/raw/ligand_raw.tsv
+      md5: 7e6bcb0bbfd8b250d41330038576caf4
+      size: 40763001
+    outs:
+    - path: data/processed/smiles_chembl_corpus.txt
+      md5: 997d5118fd6cdb04ac531ee08bf78074
+      size: 243967196
+    - path: data/processed/smiles_ligand_corpus.txt
+      md5: e7c34e6cfa44c8e09666b6bc4c8ffc5f
+      size: 4128581
+    - path: data/processed/smiles_voc.txt
+      md5: afe796dc6e011113442de00c075594cb
+      size: 345
