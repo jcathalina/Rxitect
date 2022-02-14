@@ -5,7 +5,6 @@ stages:
     - data/processed/selfies_chembl_corpus.csv
     - data/processed/selfies_ligand_corpus.csv
     - data/processed/selfies_voc.txt
-    - config/selfies_rnn_settings.yml
     outs:
     - models/pretrained_selfies_rnn.ckpt
   featurization:
