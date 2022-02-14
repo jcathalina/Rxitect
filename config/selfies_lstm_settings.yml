@@ -1,0 +1,11 @@
+hyperparams:
+  embed_size: 128
+  hidden_size: 512
+  is_lstm: true
+  lr: 0.001
+
+train_settings:
+  epochs: 50
+  dev: true
+  n_workers: 4
+  n_gpus: 1

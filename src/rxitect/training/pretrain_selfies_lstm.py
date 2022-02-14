@@ -1,5 +1,7 @@
 import logging
+import os
 from pathlib import Path
+from typing import Dict, Any
 
 from globals import root_path
 from rxitect.data.chembl_corpus import ChemblCorpus
@@ -7,13 +9,15 @@ from rxitect.structs.vocabulary import SelfiesVocabulary
 from rxitect.models.lightning.generator import Generator
 from rxitect.log_utils import print_auto_logged_info
 import pytorch_lightning as pl
+import yaml
 
 
 def train(
+        hyperparams: Dict[str, Any],
         epochs: int = 50,
         dev: bool = False,
         n_workers: int = 4,
-        n_gpus: int = 1
+        n_gpus: int = 1,
 ):
     # load_dotenv()
 
@@ -31,7 +35,8 @@ def train(
     pretrained_lstm_path = output_dir / "pretrained_selfies_lstm.ckpt" if not dev else output_dir / "dev_pretrained_selfies_lstm.ckpt"
 
     print("Creating Generator")
-    prior = Generator(vocabulary=vocabulary)
+    prior = Generator(**hyperparams,
+                      vocabulary=vocabulary,)
 
     # logging.info("Initiating ML Flow tracking...")
     # mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
@@ -61,4 +66,15 @@ def train(
 
 
 if __name__ == "__main__":
-    train(dev=True, n_workers=1)
+    if os.path.exists(root_path / "config/selfies_lstm_settings.yml"):
+        settings = yaml.safe_load(open(root_path / "config/selfies_lstm_settings.yml", "r"))
+    else:
+        raise FileNotFoundError("Expected a settings file but didn't find it.")
+
+    train_settings = settings["train_settings"]  # TODO: Refactor to just take dictionary.
+
+    train(epochs=train_settings["epochs"],
+          dev=train_settings["dev"],
+          n_workers=train_settings["n_workers"],
+          n_gpus=train_settings["n_gpus"],
+          hyperparams=settings["hyperparams"],)

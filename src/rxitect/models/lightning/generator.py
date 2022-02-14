@@ -15,6 +15,7 @@ class Generator(pl.LightningModule):
         embed_size: int = 128,
         hidden_size: int = 512,
         lr: float = 1e-3,
+        is_lstm: bool = True,
     ):
         """
         Class defining the molecule generating LSTM model.
@@ -33,7 +34,8 @@ class Generator(pl.LightningModule):
         self.lr = lr
 
         self.embed = torch.nn.Embedding(vocabulary.size, embed_size, device=self.device)
-        self.rnn = torch.nn.LSTM(
+        self.rnn_layer = torch.nn.LSTM if is_lstm else torch.nn.GRU
+        self.rnn = self.rnn_layer(
             embed_size, hidden_size, num_layers=3, batch_first=True, device=self.device
         )
         self.linear = torch.nn.Linear(hidden_size, vocabulary.size, device=self.device)
