@@ -1,7 +1,7 @@
 import gzip
 import logging
 from pathlib import Path
-from typing import List
+from typing import List, Iterable
 
 import pandas as pd
 from rdkit import Chem
@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from globals import chembl_26_size, root_path
 from rxitect import mol_utils
-from rxitect.structs.vocabulary import Vocabulary
+from rxitect.structs.vocabulary import SmilesVocabulary
 
 logger = logging.getLogger(__name__)
 MIN_TOKEN_LEN = 10
@@ -45,7 +45,7 @@ def generate_smiles_corpus(
     else:
         raise ValueError("Only valid corpus types are 'chembl' and 'ligand'.")
 
-    voc = Vocabulary()
+    voc = SmilesVocabulary()
     words = set()
     canons = []
     tokens = []

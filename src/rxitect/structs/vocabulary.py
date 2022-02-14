@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import os
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Iterable
 
 import selfies as sf
 import torch
@@ -76,6 +76,46 @@ class SelfiesVocabulary(Vocabulary):
     def check_smiles(self, sequences) -> Tuple[List[str], List[int]]:
         selfies = [self.decode(s) for s in sequences]
         smiles = [sf.decoder(selfie) for selfie in selfies]
+        valids = [1 if Chem.MolFromSmiles(smile) else 0 for smile in smiles]
+        return smiles, valids
+
+
+@dataclass
+class SmilesVocabulary(Vocabulary):
+
+    @classmethod
+    def tokenize(cls, smiles: str) -> List[str]:
+        """
+        Takes a SMILES and return a list of characters/tokens
+        Args:
+            smile (str): a decoded smiles sequence.
+        Returns:
+            tokens (List[str]): a list of tokens decoded from the SMILES sequence.
+        """
+        regex = "(\[[^\[\]]{1,6}\])"
+        smile = smile.replace("Cl", "L").replace("Br", "R")
+        tokens = []
+        for word in re.split(regex, smile):
+            if word == "" or word is None:
+                continue
+            if word.startswith("["):
+                tokens.append(word)
+            else:
+                for i, char in enumerate(word):
+                    tokens.append(char)
+        return tokens
+
+    def check_smiles(
+        self, seqs: Iterable[torch.LongTensor]
+    ) -> Tuple[List[str], List[int]]:
+        """
+        Args:
+            seqs (Iterable[torch.LongTensor]): a batch of token indices.
+        Returns:
+            smiles (List[str]): a list of decoded SMILES
+            valids (List[int]): if the decoded SMILES is valid or not
+        """
+        smiles = [self.decode(s) for s in seqs]
         valids = [1 if Chem.MolFromSmiles(smile) else 0 for smile in smiles]
         return smiles, valids
 
