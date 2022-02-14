@@ -3,7 +3,7 @@ from pathlib import Path
 
 from globals import root_path
 from rxitect.data.chembl_corpus import ChemblCorpus
-from rxitect.structs.vocabulary import Vocabulary, SelfiesVocabulary
+from rxitect.structs.vocabulary import SelfiesVocabulary
 from rxitect.models.lightning.generator import Generator
 from rxitect.log_utils import print_auto_logged_info
 import pytorch_lightning as pl

@@ -1,7 +1,8 @@
+import re
 from abc import ABC, abstractmethod
 import os
 from dataclasses import dataclass
-from typing import List, Tuple, Iterable
+from typing import List, Tuple, Iterable, Optional
 
 import selfies as sf
 import torch
@@ -13,7 +14,7 @@ from globals import root_path
 
 @dataclass
 class Vocabulary(ABC):
-    vocabulary_file_path: os.PathLike
+    vocabulary_file_path: Optional[os.PathLike] = None
     max_len: int = 100
     control: List[str] = field(init=False)
     words: List[str] = field(init=False)
@@ -23,7 +24,7 @@ class Vocabulary(ABC):
 
     def __post_init__(self):
         self.control = ["EOS", "GO"]
-        self.words = self.control + self.from_file(self.vocabulary_file_path)
+        self.words = self.control + self.from_file(self.vocabulary_file_path) if self.vocabulary_file_path else self.control
         self.size = len(self.words)
         self.tk2ix = dict(zip(self.words, range(self.size)))
         self.ix2tk = {v: k for k, v in self.tk2ix.items()}
@@ -88,12 +89,12 @@ class SmilesVocabulary(Vocabulary):
         """
         Takes a SMILES and return a list of characters/tokens
         Args:
-            smile (str): a decoded smiles sequence.
+            smiles (str): a decoded smiles sequence.
         Returns:
             tokens (List[str]): a list of tokens decoded from the SMILES sequence.
         """
         regex = "(\[[^\[\]]{1,6}\])"
-        smile = smile.replace("Cl", "L").replace("Br", "R")
+        smile = smiles.replace("Cl", "L").replace("Br", "R")
         tokens = []
         for word in re.split(regex, smile):
             if word == "" or word is None:

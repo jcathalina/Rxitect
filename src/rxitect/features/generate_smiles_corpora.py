@@ -1,7 +1,7 @@
 import gzip
 import logging
 from pathlib import Path
-from typing import List, Iterable
+from typing import List
 
 import pandas as pd
 from rdkit import Chem
@@ -45,7 +45,7 @@ def generate_smiles_corpus(
     else:
         raise ValueError("Only valid corpus types are 'chembl' and 'ligand'.")
 
-    voc = SmilesVocabulary()
+    voc = SmilesVocabulary(vocabulary_file_path=None)
     words = set()
     canons = []
     tokens = []

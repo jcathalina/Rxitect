@@ -1,5 +1,4 @@
 import logging
-import pickle
 from dataclasses import astuple, dataclass
 from typing import Iterable, List, Optional
 
@@ -9,7 +8,6 @@ import selfies as sf
 from tqdm import tqdm
 
 from globals import root_path
-from rxitect.structs.vocabulary import SelfiesVocabulary
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
