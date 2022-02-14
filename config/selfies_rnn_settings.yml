@@ -7,5 +7,5 @@ hyperparams:
 train_settings:
   epochs: 50
   dev: false
-  n_workers: 1
-  n_gpus: 1
+  n_workers: 4
+  n_gpus: 2

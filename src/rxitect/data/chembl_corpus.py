@@ -18,7 +18,7 @@ class ChemblCorpus(pl.LightningDataModule):
         vocabulary: Vocabulary,
         data_dir: Path = root_path / "data/processed",
         use_smiles: bool = False,
-        batch_size: int = 512,
+        batch_size: int = 128,
         n_workers: int = 1,
         dev_run = False,
     ):
@@ -37,7 +37,7 @@ class ChemblCorpus(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         corpus_filename = "smiles_chembl_corpus.txt" if self.use_smiles else "selfies_chembl_corpus.csv"
 
-        chembl_full = pd.read_csv(self.data_dir / corpus_filename, nrows=100_000 if self.dev_run else None)["token"]
+        chembl_full = pd.read_csv(self.data_dir / corpus_filename, nrows=100_000 if self.dev_run else 400_000)["token"]
 
         if stage == "test" or stage is None:
             chembl_test = chembl_full.sample(frac=0.2, random_state=42)
@@ -63,7 +63,7 @@ class ChemblCorpus(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             drop_last=True,
-            pin_memory=True,
+            pin_memory=False,
             num_workers=self.n_workers,
         )
 
@@ -72,7 +72,7 @@ class ChemblCorpus(pl.LightningDataModule):
             self.chembl_val,
             batch_size=self.batch_size,
             drop_last=True,
-            pin_memory=True,
+            pin_memory=False,
             num_workers=self.n_workers,
         )
 
@@ -81,6 +81,6 @@ class ChemblCorpus(pl.LightningDataModule):
             self.chembl_test,
             batch_size=self.batch_size,
             drop_last=True,
-            pin_memory=True,
+            pin_memory=False,
             num_workers=self.n_workers,
         )
