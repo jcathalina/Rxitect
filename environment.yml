@@ -6,8 +6,6 @@ dependencies:
   - python=3.7
   - pip
   - pytorch
-  - torchvision
-  - torchaudio
   - cudatoolkit=11.3
   - tqdm
   - scikit-learn=0.22.1
@@ -28,4 +26,4 @@ dependencies:
     - isort
     - gym
     - PyYAML
-    - pytorch-ligthning
+    - pytorch-lightning==1.5.10
