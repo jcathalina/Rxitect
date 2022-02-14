@@ -1,12 +1,12 @@
 stages:
   pretrain_selfies_lstm:
-    cmd: python src/rxitect/training/pretrain_selfies_lstm.py
+    cmd: python src/rxitect/training/pretrain_selfies_rnn.py
     deps:
     - data/processed/selfies_chembl_corpus.csv
     - data/processed/selfies_ligand_corpus.csv
     - data/processed/selfies_voc.txt
     outs:
-    - models/pretrained_selfies_lstm.ckpt
+    - models/pretrained_selfies_rnn.ckpt
   featurization:
     cmd: python src/rxitect/features/featurize_selfies.py
     deps:
