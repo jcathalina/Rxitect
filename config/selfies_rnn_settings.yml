@@ -6,6 +6,6 @@ hyperparams:
 
 train_settings:
   epochs: 50
-  dev: true
-  n_workers: 4
+  dev: false
+  n_workers: 1
   n_gpus: 1
