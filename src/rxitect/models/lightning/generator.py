@@ -34,10 +34,12 @@ class Generator(pl.LightningModule):
         self.lr = lr
 
         self.embed = torch.nn.Embedding(vocabulary.size, embed_size, device=self.device)
-        self.rnn_layer = torch.nn.LSTM if is_lstm else torch.nn.GRU
-        self.rnn = self.rnn_layer(
+
+        RNN_TYPE = torch.nn.LSTM if is_lstm else torch.nn.GRU
+        self.rnn = RNN_TYPE(
             embed_size, hidden_size, num_layers=3, batch_first=True, device=self.device
         )
+
         self.linear = torch.nn.Linear(hidden_size, vocabulary.size, device=self.device)
         self.automatic_optimization = False
 
