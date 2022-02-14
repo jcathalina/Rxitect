@@ -32,7 +32,7 @@ def train(
         )
         Path(output_dir).mkdir(parents=True)
 
-    pretrained_lstm_path = output_dir / "pretrained_selfies_lstm.ckpt" if not dev else output_dir / "dev_pretrained_selfies_lstm.ckpt"
+    pretrained_rnn_path = output_dir / "pretrained_selfies_rnn.ckpt" if not dev else output_dir / "dev_pretrained_selfies_rnn.ckpt"
 
     print("Creating Generator")
     prior = Generator(**hyperparams,
@@ -42,7 +42,7 @@ def train(
     # mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
     # mlflow.pytorch.autolog()
 
-    print("Corpus time...")
+    print("Loading Corpus...")
     chembl_dm = ChemblCorpus(vocabulary=vocabulary, n_workers=n_workers, dev_run=dev)
     logging.info("Setting up ChEMBL Data Module...")
     chembl_dm.setup(stage="fit")
@@ -61,13 +61,14 @@ def train(
     pretrainer.fit(model=prior, datamodule=chembl_dm)
 
     # print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
-    print("Training finished, saving pretrained LSTM checkpoint...")
-    pretrainer.save_checkpoint(filepath=pretrained_lstm_path)
+    print("Training finished, saving pretrained model checkpoint...")
+    pretrainer.save_checkpoint(filepath=pretrained_rnn_path)
 
 
 if __name__ == "__main__":
-    if os.path.exists(root_path / "config/selfies_lstm_settings.yml"):
-        settings = yaml.safe_load(open(root_path / "config/selfies_lstm_settings.yml", "r"))
+    settings_path = root_path / "config/selfies_rnn_settings.yml"
+    if os.path.exists(settings_path):
+        settings = yaml.safe_load(open(settings_path, "r"))
     else:
         raise FileNotFoundError("Expected a settings file but didn't find it.")
 
