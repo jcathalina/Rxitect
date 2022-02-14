@@ -19,3 +19,22 @@ stages:
     - path: data/processed/smiles_voc.txt
       md5: afe796dc6e011113442de00c075594cb
       size: 345
+  featurization:
+    cmd: python src/rxitect/features/featurize_selfies.py
+    deps:
+    - path: data/processed/smiles_chembl_corpus.txt
+      md5: 997d5118fd6cdb04ac531ee08bf78074
+      size: 243967196
+    - path: data/processed/smiles_ligand_corpus.txt
+      md5: e7c34e6cfa44c8e09666b6bc4c8ffc5f
+      size: 4128581
+    outs:
+    - path: data/processed/selfies_chembl_corpus.csv
+      md5: 4867a47252337aa315e9ff12c60d1f48
+      size: 837637828
+    - path: data/processed/selfies_ligand_corpus.csv
+      md5: 124518d252db89ce389293e8d41d14e5
+      size: 14569683
+    - path: data/processed/selfies_voc.txt
+      md5: 9976764674593394b756ef6e5c459080
+      size: 552
