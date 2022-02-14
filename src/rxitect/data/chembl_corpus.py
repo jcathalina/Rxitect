@@ -18,9 +18,9 @@ class ChemblCorpus(pl.LightningDataModule):
         vocabulary: Vocabulary,
         data_dir: Path = root_path / "data/processed",
         use_smiles: bool = False,
-        batch_size: int = 128,
+        batch_size: int = 512,
         n_workers: int = 1,
-        dev_run = False,
+        dev_run: bool = False,
     ):
         super().__init__()
         self.vocabulary = vocabulary
@@ -37,7 +37,7 @@ class ChemblCorpus(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         corpus_filename = "smiles_chembl_corpus.txt" if self.use_smiles else "selfies_chembl_corpus.csv"
 
-        chembl_full = pd.read_csv(self.data_dir / corpus_filename, nrows=100_000 if self.dev_run else 400_000)["token"]
+        chembl_full = pd.read_csv(self.data_dir / corpus_filename, nrows=100_000 if self.dev_run else 200_000)["token"]
 
         if stage == "test" or stage is None:
             chembl_test = chembl_full.sample(frac=0.2, random_state=42)

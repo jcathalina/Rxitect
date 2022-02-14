@@ -8,8 +8,12 @@ from rxitect.data.chembl_corpus import ChemblCorpus
 from rxitect.structs.vocabulary import SelfiesVocabulary
 from rxitect.models.lightning.generator import Generator
 from rxitect.log_utils import print_auto_logged_info
+import mlflow
 import pytorch_lightning as pl
 import yaml
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 def train(
@@ -19,7 +23,6 @@ def train(
         n_workers: int = 4,
         n_gpus: int = 1,
 ):
-    # load_dotenv()
 
     vocabulary = SelfiesVocabulary(
         vocabulary_file_path=root_path / "data/processed/selfies_voc.txt"
@@ -38,9 +41,9 @@ def train(
     prior = Generator(**hyperparams,
                       vocabulary=vocabulary,)
 
-    # logging.info("Initiating ML Flow tracking...")
-    # mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
-    # mlflow.pytorch.autolog()
+    logging.info("Initiating ML Flow tracking...")
+    mlflow.set_tracking_uri("https://dagshub.com/naisuu/Rxitect.mlflow")
+    mlflow.pytorch.autolog()
 
     print("Loading Corpus...")
     chembl_dm = ChemblCorpus(vocabulary=vocabulary, n_workers=n_workers, dev_run=dev)
@@ -55,13 +58,12 @@ def train(
         default_root_dir=output_dir,
     )
 
-    # logging.info("Starting main pretraining run...")
-    # with mlflow.start_run() as run:
-    #     pretrainer.fit(model=prior, datamodule=chembl_dm)
-    pretrainer.fit(model=prior, datamodule=chembl_dm)
+    logging.info("Starting main pretraining run...")
+    with mlflow.start_run() as run:
+        pretrainer.fit(model=prior, datamodule=chembl_dm)
 
-    # print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
-    print("Training finished, saving pretrained model checkpoint...")
+    print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
+    logging.info("Training finished, saving pretrained model checkpoint...")
     pretrainer.save_checkpoint(filepath=pretrained_rnn_path)
 
 
