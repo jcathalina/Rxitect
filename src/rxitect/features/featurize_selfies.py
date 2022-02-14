@@ -75,7 +75,7 @@ def safe_encode_to_selfies(smi: str) -> Optional[str]:
         return None
 
 
-def featurization(selfies_enc: SelfiesEncodings, create_voc_file: bool = False) -> None:
+def featurization(selfies_enc: SelfiesEncodings, source: str, create_voc_file: bool = False) -> None:
     """Generate the csv files used for training our molecule generator
     
     Args:
@@ -88,7 +88,7 @@ def featurization(selfies_enc: SelfiesEncodings, create_voc_file: bool = False) 
     selfies_list, selfies_voc, max_selfie_len = selfies_enc
     tokenized_selfies_list = [" ".join(list(sf.split_selfies(selfie))) for selfie in selfies_list]
     selfies_df = pd.DataFrame(data={"selfies": selfies_list, "token": tokenized_selfies_list})
-    selfies_df.to_csv(root_path / "data/processed/selfies_chembl_corpus.csv", index=False)
+    selfies_df.to_csv(root_path / f"data/processed/selfies_{source}_corpus.csv", index=False)
     
     if create_voc_file:
         with open(root_path / "data/processed/selfies_voc.txt", "w") as f:
@@ -100,12 +100,12 @@ def main():
         root_path / "data/processed/smiles_chembl_corpus.txt"
     )
     # Only generate voc for chembl dataset, already contains all available tokens.
-    featurization(chembl_selfies_enc, create_voc_file=True)
+    featurization(chembl_selfies_enc, source="chembl", create_voc_file=True)
 
     ligand_selfies_enc = generate_selfies_encodings(
         root_path / "data/processed/smiles_ligand_corpus.txt"
     )
-    featurization(ligand_selfies_enc)
+    featurization(ligand_selfies_enc, source="ligand")
 
 
 if __name__ == "__main__":
