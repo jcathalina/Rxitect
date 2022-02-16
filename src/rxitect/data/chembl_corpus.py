@@ -37,7 +37,7 @@ class ChemblCorpus(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         corpus_filename = "smiles_chembl_corpus.txt" if self.use_smiles else "selfies_chembl_corpus.csv"
 
-        chembl_full = pd.read_csv(self.data_dir / corpus_filename, nrows=100_000 if self.dev_run else 200_000)["token"]
+        chembl_full = pd.read_csv(self.data_dir / corpus_filename, nrows=100_000 if self.dev_run else None)["token"]
 
         if stage == "test" or stage is None:
             chembl_test = chembl_full.sample(frac=0.2, random_state=42)
