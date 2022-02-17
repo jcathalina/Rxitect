@@ -56,6 +56,7 @@ def train(
         log_every_n_steps=1 if dev else 50,
         max_epochs=epochs,
         default_root_dir=output_dir,
+        # resume_from_checkpoint= root_path / "models/lightning_logs/version_4/checkpoints/epoch=14-step=44879.ckpt"
     )
 
     logging.info("Starting main pretraining run...")

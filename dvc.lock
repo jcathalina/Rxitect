@@ -38,3 +38,19 @@ stages:
     - path: data/processed/selfies_voc.txt
       md5: 9976764674593394b756ef6e5c459080
       size: 552
+  pretrain_selfies_lstm:
+    cmd: python src/rxitect/training/pretrain_selfies_rnn.py
+    deps:
+    - path: data/processed/selfies_chembl_corpus.csv
+      md5: 4867a47252337aa315e9ff12c60d1f48
+      size: 837637828
+    - path: data/processed/selfies_ligand_corpus.csv
+      md5: 124518d252db89ce389293e8d41d14e5
+      size: 14569683
+    - path: data/processed/selfies_voc.txt
+      md5: 9976764674593394b756ef6e5c459080
+      size: 552
+    outs:
+    - path: models/pretrained_selfies_rnn.ckpt
+      md5: 8a89a8535204053023c237bd43c5fe8e
+      size: 66881020
