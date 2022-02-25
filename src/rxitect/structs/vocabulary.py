@@ -102,7 +102,7 @@ class SmilesVocabulary(Vocabulary):
             if word.startswith("["):
                 tokens.append(word)
             else:
-                for i, char in enumerate(word):
+                for char in word:
                     tokens.append(char)
         return tokens
 

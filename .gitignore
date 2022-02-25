@@ -8,3 +8,4 @@ test_smiles.txt
 .idea
 .vscode
 lightning_logs
+/artifacts
