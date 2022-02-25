@@ -54,3 +54,16 @@ stages:
     - path: models/pretrained_selfies_rnn.ckpt
       md5: 8a89a8535204053023c237bd43c5fe8e
       size: 66881020
+  fine_tune_selfies_lstm:
+    cmd: python src/rxitect/training/fine_tune_selfies_rnn.py
+    deps:
+    - path: data/processed/selfies_voc.txt
+      md5: 9976764674593394b756ef6e5c459080
+      size: 552
+    - path: models/pretrained_selfies_rnn.ckpt
+      md5: 8a89a8535204053023c237bd43c5fe8e
+      size: 66881020
+    outs:
+    - path: models/fine_tuned_selfies_rnn.ckpt
+      md5: eb5e51359987e2dded5e24067b57b24e
+      size: 66882459

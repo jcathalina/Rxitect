@@ -1,2 +1,3 @@
 /pretrained_selfies_rnn.ckpt
 /pretrained_smiles_lstm.ckpt
+/fine_tuned_selfies_rnn.ckpt
