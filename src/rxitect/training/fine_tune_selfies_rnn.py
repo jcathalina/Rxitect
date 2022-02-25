@@ -15,7 +15,7 @@ from rxitect.log_utils import print_auto_logged_info
 def fine_tune(
     epochs: int = 1_000,
     dev: bool = False,
-    n_workers: int = 4,
+    n_workers: int = 2,
     n_gpus: int = 1
 ):
     vocabulary = SelfiesVocabulary(
@@ -27,7 +27,7 @@ def fine_tune(
     fine_tuned_lstm_path = output_dir / "fine_tuned_selfies_rnn.ckpt"
     
     logging.info("Initiating ML Flow tracking...")
-    mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
+    mlflow.set_tracking_uri("https://dagshub.com/naisuu/Rxitect.mlflow")
     mlflow.pytorch.autolog()
     
     logging.info("Loading pre-trained LSTM model for fine-tuning...")
@@ -40,7 +40,7 @@ def fine_tune(
 
     fine_tuner = pl.Trainer(
         gpus=n_gpus,
-        log_every_n_steps=1 if dev else 100,
+        log_every_n_steps=1 if dev else 50,
         max_epochs=epochs,
         fast_dev_run=dev,
         default_root_dir=output_dir,
