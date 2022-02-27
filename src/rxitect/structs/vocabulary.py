@@ -74,7 +74,7 @@ class SelfiesVocabulary(Vocabulary):
         selfie_tokens = sf.split_selfies(selfie)
         return list(selfie_tokens)
 
-    def check_smiles(self, sequences) -> Tuple[List[str], List[int]]:
+    def check_smiles(self, sequences: torch.Tensor) -> Tuple[List[str], List[int]]:
         selfies = [self.decode(s) for s in sequences]
         smiles = [sf.decoder(selfie) for selfie in selfies]
         valids = [1 if Chem.MolFromSmiles(smile) else 0 for smile in smiles]

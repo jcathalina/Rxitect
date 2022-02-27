@@ -8,7 +8,7 @@ from rxitect import tensor_utils
 from rxitect.structs.vocabulary import SelfiesVocabulary
 
 
-class Generator(nn.Module):
+class VanillaGenerator(nn.Module):
     def __init__(
         self,
         voc: SelfiesVocabulary,
@@ -17,7 +17,7 @@ class Generator(nn.Module):
         is_lstm=True,
         lr=1e-3,
     ):
-        super(Generator, self).__init__()
+        super(VanillaGenerator, self).__init__()
         self.voc = voc
         self.embed_size = embed_size
         self.hidden_size = hidden_size

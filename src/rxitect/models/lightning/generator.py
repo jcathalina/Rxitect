@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
+from globals import device
 
 from rxitect.structs.vocabulary import Vocabulary
 from rxitect import tensor_utils
@@ -33,14 +34,14 @@ class Generator(pl.LightningModule):
         self.output_size = vocabulary.size
         self.lr = lr
 
-        self.embed = torch.nn.Embedding(vocabulary.size, embed_size, device=self.device)
+        self.embed = torch.nn.Embedding(vocabulary.size, embed_size, device=device)
 
         RNN_TYPE = torch.nn.LSTM if is_lstm else torch.nn.GRU
         self.rnn = RNN_TYPE(
-            embed_size, hidden_size, num_layers=3, batch_first=True, device=self.device
+            embed_size, hidden_size, num_layers=3, batch_first=True, device=device
         )
 
-        self.linear = torch.nn.Linear(hidden_size, vocabulary.size, device=self.device)
+        self.linear = torch.nn.Linear(hidden_size, vocabulary.size, device=device)
         self.automatic_optimization = False
 
     def forward(self, x, h):
@@ -85,15 +86,16 @@ class Generator(pl.LightningModule):
             x = target[:, step]
         return scores
 
-    def policy_gradient_loss(self, loader: DataLoader) -> None:
+    def policy_grad_loss(self, loader: DataLoader) -> None:
         """ """
-        for sequence, reward in loader:
-            self.zero_grad()
-            score = self.likelihood(sequence)
-            loss = score * reward
-            loss = -loss.mean()
-            self.manual_backward(loss)
-            self.opt.step()
+        # for sequence, reward in loader:
+        #     self.zero_grad()
+        #     score = self.likelihood(sequence)
+        #     loss = score * reward
+        #     loss = -loss.mean()
+        #     self.manual_backward(loss)
+        #     self.opt.step()
+        pass
 
     def sample(self, batch_size):
         """ """
@@ -147,52 +149,3 @@ class Generator(pl.LightningModule):
         frac_valid = sum(valids) / len(sequences)
         self.log("frac_valid_smiles", frac_valid)
         print(f"Fraction of valid smiles: {frac_valid}")
-
-
-def evolve(
-    net: Generator,
-    batch_size: int,
-    epsilon: float = 0.01,
-    crover: Optional["Generator"] = None,
-    mutate: Optional["Generator"] = None,
-):
-    """ """
-    # Start tokens
-    x = torch.tensor(
-        [net.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=net.device
-    )
-    # Hidden states initialization for exploitation network
-    h = net.init_h(batch_size)
-    # Hidden states initialization for exploration network
-    h2 = net.init_h(batch_size)
-    # Initialization of output matrix
-    sequences = torch.zeros(batch_size, net.voc.max_len, device=net.device).long()
-    # labels to judge and record which sample is ended
-    is_end = torch.zeros(batch_size, device=net.device).bool()
-
-    for step in range(net.voc.max_len):
-        is_change = torch.rand(1) < 0.5
-        if crover is not None and is_change:
-            logit, h = crover(x, h)
-        else:
-            logit, h = net(x, h)
-        proba = logit.softmax(dim=-1)
-        if mutate is not None:
-            logit2, h2 = mutate(x, h2)
-            ratio = torch.rand(batch_size, 1, device=net.device) * epsilon
-            proba = (
-                logit.softmax(dim=-1) * (1 - ratio) + logit2.softmax(dim=-1) * ratio
-            )
-        # sampling based on output probability distribution
-        x = torch.multinomial(proba, 1).view(-1)
-
-        x[is_end] = net.voc.tk2ix["EOS"]
-        sequences[:, step] = x
-
-        # Judging whether samples are end or not.
-        end_token = x == net.voc.tk2ix["EOS"]
-        is_end = torch.ge(is_end + end_token, 1)
-        #  If all of the samples generation being end, stop the sampling process
-        if (is_end == 1).all():
-            break
-    return sequences

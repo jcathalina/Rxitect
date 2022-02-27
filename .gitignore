@@ -9,3 +9,6 @@ test_smiles.txt
 .vscode
 lightning_logs
 /artifacts
+
+# log files
+logs/*.log
