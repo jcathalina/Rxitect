@@ -99,6 +99,7 @@ class Rxitect:
                 desire = scores["DESIRE"].sum() / self.n_samples
                 
                 score = scores[self.env.keys].values.prod(axis=1) ** (1.0 / len(self.env.keys))
+                score = score.sum() / self.n_samples
 
                 if use_mflow:
                     dyn_metrics = {k: scores[k].mean() for k in self.env.keys}
