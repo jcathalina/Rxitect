@@ -50,7 +50,7 @@ class Rxitect:
         sequences = sequences[torch.tensor(uidx, device=device, dtype=torch.long)]
         
         # print(">>> Scoring...")
-        scores = self.env.calc_reward(smiles=smiles, scheme="PR")
+        scores = self.env.calc_reward(smiles=smiles)
         dataset = TensorDataset(sequences, torch.tensor(scores, device=device))
         dataloader = DataLoader(dataset=dataset, batch_size=self.n_samples, shuffle=True)
 
@@ -75,8 +75,8 @@ class Rxitect:
                 "epochs": max_epochs,
                 "crossover": use_crossover,
                 "mutation": use_mutation,
-                "lr": self.generator.lr,
-                "scoring_scheme": self.env.scoring_scheme.name
+                "scoring_scheme": self.env.scoring_scheme.name,
+                "lr": self.generator.optim.param_groups[-1]["lr"]
             })
 
         with open(log_filepath, "w") as log_file:
@@ -195,7 +195,7 @@ if __name__ == "__main__":
         voc = SelfiesVocabulary(root_path / "data/processed/selfies_voc.txt")
         gen = VanillaGenerator(voc=voc)
         gen.load_state_dict(torch.load(root_path / "models/fine_tuned_selfies_rnn.ckpt")["state_dict"])
-        env = Environment.get_default_env(scoring_scheme=ScoringScheme.PR)
+        env = Environment.get_default_env()
         rxitect = Rxitect(generator=gen, environment=env)
         rxitect.fit(max_epochs=100,
                     use_crossover=True,

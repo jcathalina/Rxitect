@@ -78,7 +78,7 @@ class Environment:
         fps = [mol_utils.get_fingerprint(mol, fp_type) for mol in mols]
         return fps
 
-    def calc_reward(self, smiles: List[str], scheme='WS') -> np.ndarray:
+    def calc_reward(self, smiles: List[str]) -> np.ndarray:
         """
         Calculate the single value as the reward for each molecule used for reinforcement learning
         Args:
@@ -116,7 +116,7 @@ class Environment:
         return rewards
 
     @classmethod
-    def get_default_env(cls, scoring_scheme: ScoringScheme) -> "Environment":
+    def get_default_env(cls, scoring_scheme: ScoringScheme = ScoringScheme.PR) -> "Environment":
         A1_pred = Predictor(path=root_path / "models/RF_REG_CHEMBL226.pkg")
         A2A_pred = Predictor(path=root_path / "models/RF_REG_CHEMBL251.pkg")
         ERG_pred = Predictor(path=root_path / "models/RF_REG_CHEMBL240.pkg")
