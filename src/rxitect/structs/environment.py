@@ -54,7 +54,7 @@ class Environment:
         fps = None
 
         # Extra copy for predictors that rely on SMILES strings
-        smiles_ = copy.deepcopy(mols) if is_smiles else [Chem.MolToSmiles(mols)]
+        smiles_ = copy.deepcopy(mols) if is_smiles else [Chem.MolToSmiles(mol) for mol in mols]
 
         if is_smiles:
             mols = [Chem.MolFromSmiles(s) for s in mols]
