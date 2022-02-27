@@ -105,7 +105,7 @@ class Rxitect:
                     mlflow.log_metrics(metrics=metrics, step=epoch)
 
                 if epoch %25 == 0 or epoch == max_epochs-1:
-                    print(f"SMILES @ EPOCH {epoch}: {'\n'.join(smiles)}", file=log_file)
+                    print(f"SMILES @ EPOCH {epoch}: {smiles}", file=log_file)
 
                 if best_score <= score and (epoch >= 25):
                     torch.save(self.generator.state_dict(), root_path / f"models/{time_tag}_epoch={epoch}.pkg")
