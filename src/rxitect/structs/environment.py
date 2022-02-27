@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass
 from enum import Enum
 from multiprocessing.sharedctypes import Value
@@ -9,6 +10,7 @@ from rxitect import mol_utils, sorting, tensor_utils
 from rxitect.models.vanilla.predictor import Predictor
 from rdkit.Chem import Mol
 from globals import root_path
+from rxitect.structs.ra_scorer import RetrosyntheticAccessibilityScorer
 
 
 @dataclass(order=True, frozen=True)
@@ -50,12 +52,22 @@ class Environment:
         """
         preds = {}
         fps = None
+
+        # Extra copy for predictors that rely on SMILES strings
+        smiles_ = copy.deepcopy(mols) if is_smiles else [Chem.MolToSmiles(mols)]
+
         if is_smiles:
             mols = [Chem.MolFromSmiles(s) for s in mols]
         for objective in self.objectives:
-            if fps is None:
-                fps = objective.predictor.calc_fp(mols)
-            score = objective.predictor(fps)
+
+            if isinstance(objective.predictor, Predictor):
+                if fps is None:
+                    fps = objective.predictor.calc_fp(mols)
+                score = objective.predictor(fps)
+            elif isinstance(objective.predictor, RetrosyntheticAccessibilityScorer):
+                score = objective.predictor(smiles_)
+            else:
+                raise ValueError(f"Unsupported type of predictor: {type(objective.predictor)}")
 
             if use_mods and objective.modifier is not None:
                 score = objective.modifier(score)
@@ -143,4 +155,41 @@ class Environment:
                         key="ERG")
 
         env = Environment([A1, A2A, ERG])
+        return env
+
+
+    @classmethod
+    def get_ra_boosted_env(cls, scoring_scheme: ScoringScheme = ScoringScheme.PR, xgb: bool = False) -> "Environment":
+        A1_pred = Predictor(path=root_path / "models/RF_REG_CHEMBL226.pkg")
+        A2A_pred = Predictor(path=root_path / "models/RF_REG_CHEMBL251.pkg")
+        ERG_pred = Predictor(path=root_path / "models/RF_REG_CHEMBL240.pkg")
+        RA_pred = RetrosyntheticAccessibilityScorer(use_xgb_model=xgb)
+
+        no_mod = lambda x: x
+        if scoring_scheme == ScoringScheme.WS:
+            mod1 = tensor_utils.ClippedScore(lower_x=3, upper_x=6.5)
+            mod2 = tensor_utils.ClippedScore(lower_x=10, upper_x=3)
+        else:
+            mod1 = tensor_utils.ClippedScore(lower_x=3, upper_x=6.5)
+            mod2 = tensor_utils.ClippedScore(lower_x=10, upper_x=6.5)
+
+
+        A1 = Objective(predictor=A1_pred,
+                       modifier=mod1,
+                       threshold=0.5 if scoring_scheme == ScoringScheme.WS else 0.99,
+                       key="A1")
+        A2A = Objective(predictor=A2A_pred,
+                        modifier=mod1,
+                        threshold=0.5 if scoring_scheme == ScoringScheme.WS else 0.99,
+                        key="A2A")
+        ERG = Objective(predictor=ERG_pred,
+                        modifier=mod2,
+                        threshold=0.5 if scoring_scheme == ScoringScheme.WS else 0.99,
+                        key="ERG")
+        RA_SCORE = Objective(predictor=RA_pred,
+                             modifier=no_mod,  # Already always returns score [0-1]
+                             threshold=0.5 if scoring_scheme == ScoringScheme.WS else 0.99,
+                             key="RA_SCORE")
+
+        env = Environment([A1, A2A, ERG, RA_SCORE])
         return env

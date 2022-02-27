@@ -9,3 +9,11 @@ train_settings:
   dev: false
   n_workers: 2
   n_gpus: 1
+  lr: 0.001
+
+fine_tune_settings:
+  epochs: 1000
+  dev: false
+  n_workers: 2
+  n_gpus: 1
+  lr: 0.0001

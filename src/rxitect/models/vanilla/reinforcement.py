@@ -1,6 +1,6 @@
 
 from datetime import date, datetime
-from typing import List, Optional, Union
+from typing import List, Optional, OrderedDict, Union
 import numpy as np
 import torch
 import selfies as sf
@@ -31,12 +31,12 @@ class Rxitect:
         self.replay: int = replay_size
         self.batch_size: int = batch_size
         self.n_samples: int = sample_size
-        # self.mean_fn: str = "geometric"
 
     def policy_gradient(self,
                         crossover_net: Optional[VanillaGenerator] = None,
                         mutation_net: Optional[VanillaGenerator] = None) -> None:
-        # print(">>> Policy Gradient step...")
+
+        # Policy Gradient step
         sequences = [evolve(net=self.generator,
                             batch_size=self.batch_size,
                             crover=crossover_net,
@@ -49,7 +49,7 @@ class Rxitect:
         smiles = [sf.decoder(selfie) for selfie in list(selfies)]
         sequences = sequences[torch.tensor(uidx, device=device, dtype=torch.long)]
         
-        # print(">>> Scoring...")
+        # Scoring step
         scores = self.env.calc_reward(smiles=smiles)
         dataset = TensorDataset(sequences, torch.tensor(scores, device=device))
         dataloader = DataLoader(dataset=dataset, batch_size=self.n_samples, shuffle=True)
@@ -57,15 +57,19 @@ class Rxitect:
         self.generator.policy_grad_loss(loader=dataloader)
 
     def fit(self,
+            output_filename: str,
             max_epochs: int = 1_000,
             use_crossover: bool = False,
             use_mutation: bool = False, 
-            use_mflow: bool = False):
+            use_mflow: bool = False,
+            update_interval: int = 50):
 
         time_tag = datetime.strftime(date.today(), format="%d%m%Y")
         log_filepath = root_path / f"logs/rxitect_run_{time_tag}.log"
+        pkg_filepath = root_path / f"models/{output_filename}_{time_tag}.pkg"
         best_score = 0
         last_save = 0
+        best_state_dict = self.generator.state_dict()  # initialize best state dict
 
         crossover_net = _init_crossover_net() if use_crossover else None
         mutation_net = _init_mutation_net() if use_mutation else None
@@ -93,7 +97,8 @@ class Rxitect:
                 scores = self.env.get_preds(mols=smiles, is_smiles=True)
                 
                 desire = scores["DESIRE"].sum() / self.n_samples
-                score = scores[self.env.keys].values.mean()
+                
+                score = scores[self.env.keys].values.prod(axis=1) ** (1.0 / len(self.env.keys))
 
                 if use_mflow:
                     dyn_metrics = {k: scores[k].mean() for k in self.env.keys}
@@ -104,25 +109,23 @@ class Rxitect:
                     }
                     mlflow.log_metrics(metrics=metrics, step=epoch)
 
-                if epoch %25 == 0 or epoch == max_epochs-1:
-                    print(f"SMILES @ EPOCH {epoch}: {smiles}", file=log_file)
-
-                if best_score <= score and (epoch >= 25):
-                    torch.save(self.generator.state_dict(), root_path / f"models/{time_tag}_epoch={epoch}.pkg")
+                if best_score <= score:
+                    best_state_dict = self.generator.state_dict()
                     best_score = score
                     last_save = epoch
                 
-                # print(f"Epoch: {epoch} average: {score:.4} frac desirable: {desire}", file=log_file)
-                
-                # for i, smile in enumerate(smiles):
-                #     score_log = "\t".join([f"{sc:.3}" for sc in scores.values[i]])
-                #     print(f"{score_log}\t{smile}", file=log_file)
-
-                if epoch - last_save > 100:  # early stop criterium
+                if epoch - last_save > update_interval:  # early stop criterium
+                    torch.save(best_state_dict, pkg_filepath)
                     break
+
+                if epoch % update_interval == 0 and epoch != 0:
+                    self.generator.load_state_dict(best_state_dict)
+                    if crossover_net:
+                        crossover_net.load_state_dict(best_state_dict)
+                    print(f"EPOCH={epoch},{','.join(smiles)}", file=log_file)
             
-            for param_group in self.generator.optim.param_groups:
-                param_group["lr"] *= 0.99
+            # End of training loop
+            torch.save(best_state_dict, pkg_filepath)
 
 
 def _init_crossover_net() -> VanillaGenerator:
@@ -187,8 +190,7 @@ def evolve(net: Union[Generator, VanillaGenerator],
     return sequences
 
 
-if __name__ == "__main__":
-    
+def base_3_obj_run():
     print("Initiating ML Flow tracking...")
     mlflow.set_tracking_uri("https://dagshub.com/naisuu/Rxitect.mlflow")
     with mlflow.start_run() as run:
@@ -200,11 +202,50 @@ if __name__ == "__main__":
         rxitect.fit(max_epochs=100,
                     use_crossover=True,
                     use_mutation=True,
-                    use_mflow=True)
+                    use_mflow=True,
+                    update_interval=20,
+                    output_filename="obj3_base")
 
 
-    # x = evolve(net=gen, batch_size=64)
-    # x_dec = [voc.decode(y) for y in x]
-    # smi_x = [sf.decoder(y) for y in x_dec]
-    # res = voc.check_smiles(sequences=x)
-    # print(f"frac val: {np.sum(res[1]) / len(res[1])}")
+def base_3_obj_with_ra_score_dnn_run():
+    print("Initiating ML Flow tracking...")
+    mlflow.set_tracking_uri("https://dagshub.com/naisuu/Rxitect.mlflow")
+    with mlflow.start_run() as run:
+        mlflow.log_param("rascore_xgb", False)
+
+        voc = SelfiesVocabulary(root_path / "data/processed/selfies_voc.txt")
+        gen = VanillaGenerator(voc=voc)
+        gen.load_state_dict(torch.load(root_path / "models/fine_tuned_selfies_rnn.ckpt")["state_dict"])
+        env = Environment.get_ra_boosted_env(xgb=False)
+        rxitect = Rxitect(generator=gen, environment=env)
+        rxitect.fit(max_epochs=100,
+                    use_crossover=True,
+                    use_mutation=True,
+                    use_mflow=True,
+                    update_interval=20,
+                    output_filename="obj3_ra=dnn")
+
+
+def base_3_obj_with_ra_score_xgb_run():
+    print("Initiating ML Flow tracking...")
+    mlflow.set_tracking_uri("https://dagshub.com/naisuu/Rxitect.mlflow")
+    with mlflow.start_run() as run:
+        mlflow.log_param("rascore_xgb", True)
+
+        voc = SelfiesVocabulary(root_path / "data/processed/selfies_voc.txt")
+        gen = VanillaGenerator(voc=voc)
+        gen.load_state_dict(torch.load(root_path / "models/fine_tuned_selfies_rnn.ckpt")["state_dict"])
+        env = Environment.get_ra_boosted_env(xgb=True)
+        rxitect = Rxitect(generator=gen, environment=env)
+        rxitect.fit(max_epochs=100,
+                    use_crossover=True,
+                    use_mutation=True,
+                    use_mflow=True,
+                    update_interval=20,
+                    output_filename="obj3_ra=xgb")
+
+
+if __name__ == "__main__":
+    base_3_obj_run()
+    base_3_obj_with_ra_score_dnn_run()
+    base_3_obj_with_ra_score_xgb_run()
