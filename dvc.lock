@@ -67,3 +67,19 @@ stages:
     - path: models/fine_tuned_selfies_rnn.ckpt
       md5: eb5e51359987e2dded5e24067b57b24e
       size: 66882459
+  train_predictors:
+    cmd: python src/rxitect/training/train_predictors.py
+    deps:
+    - path: data/raw/ligand_raw.tsv
+      md5: 7e6bcb0bbfd8b250d41330038576caf4
+      size: 40763001
+    outs:
+    - path: models/RF_REG_CHEMBL226.pkg
+      md5: bd9130dbd4564e6278f27fd2f5a5f4dd
+      size: 84989931
+    - path: models/RF_REG_CHEMBL240.pkg
+      md5: d092ae2d2514bf7c6df467fd7f2aeceb
+      size: 135286055
+    - path: models/RF_REG_CHEMBL251.pkg
+      md5: a8668f03f8d2c50d7a7c6bc5d7e61f87
+      size: 92714274
