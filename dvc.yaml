@@ -32,3 +32,11 @@ stages:
     - models/pretrained_selfies_rnn.ckpt
     outs:
     - models/fine_tuned_selfies_rnn.ckpt
+  train_predictors:
+    cmd: python src/rxitect/training/train_predictors.py
+    deps:
+    - data/raw/ligand_raw.tsv
+    outs:
+    - models/RF_REG_CHEMBL226.pkg
+    - models/RF_REG_CHEMBL240.pkg
+    - models/RF_REG_CHEMBL251.pkg
