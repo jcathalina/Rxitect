@@ -12,3 +12,16 @@ lightning_logs
 
 # log files
 logs/*.log
+
+# misc. training result files, TODO: Clean up when experiments done.
+models/dev_pretrained_selfies_rnn.ckpt
+models/27022022_epoch=97_first_try.pkg
+models/fpscores.pkl.gz
+models/RF_REG_CHEMBL226.cv.tsv
+models/RF_REG_CHEMBL226.ind.tsv
+models/RF_REG_CHEMBL240.cv.tsv
+models/RF_REG_CHEMBL240.ind.tsv
+models/RF_REG_CHEMBL251.cv.tsv
+models/RF_REG_CHEMBL251.ind.tsv
+models/selfies_lstm_epoch=14-step=44879.ckpt
+models/selfies_lstm_epoch=21-step=65823.ckpt

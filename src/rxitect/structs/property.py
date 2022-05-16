@@ -2,6 +2,7 @@ import numpy as np
 from rdkit.Chem import AllChem, Crippen, Descriptors, Lipinski
 from rdkit.Chem.GraphDescriptors import BertzCT
 from rdkit.Chem.QED import qed
+from rxitect.structs import sa_scorer
 
 
 class Property:
@@ -28,6 +29,7 @@ class Property:
             "Valence": Descriptors.NumValenceElectrons,
             "MR": Crippen.MolMR,
             "QED": qed,
+            "SA": sa_scorer.calculateScore,
             "Bertz": BertzCT,
         }
 
