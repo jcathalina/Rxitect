@@ -112,7 +112,8 @@ class Environment:
         if self.scoring_scheme == ScoringScheme.PR:
             fps = self.calc_fps(mols)
             rewards = np.zeros((len(smiles), 1))
-            ranks = sorting.similarity_sort(preds, fps, is_gpu=True)
+            # ranks = sorting.similarity_sort(preds, fps, is_gpu=True)
+            ranks = sorting.NSGA_2.sort(preds, fps)
             score = (np.arange(undesire) / undesire / 2).tolist() + (np.arange(desire) / desire / 2 + 0.5).tolist()
             rewards[ranks, 0] = score
      
