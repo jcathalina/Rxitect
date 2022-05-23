@@ -1,42 +1,23 @@
 stages:
-  pretrain_selfies_lstm:
-    cmd: python src/rxitect/training/pretrain_selfies_rnn.py
+  process_data:
+    cmd: python src/process.py
     deps:
-    - data/processed/selfies_chembl_corpus.csv
-    - data/processed/selfies_ligand_corpus.csv
-    - data/processed/selfies_voc.txt
+    - config/main.yaml
+    - config/process
+    - data/raw
+    - src/process.py
     outs:
-    - models/pretrained_selfies_rnn.ckpt
-  featurization:
-    cmd: python src/rxitect/features/featurize_selfies.py
+    - data/processed:
+        persist: true
+  train_model:
+    cmd: python src/train_model.py
     deps:
-    - data/processed/smiles_chembl_corpus.txt
-    - data/processed/smiles_ligand_corpus.txt
+    - config/main.yaml
+    - config/model
+    - data/processed
+    - src/train_model.py
     outs:
-    - data/processed/selfies_chembl_corpus.csv
-    - data/processed/selfies_ligand_corpus.csv
-    - data/processed/selfies_voc.txt
-  generate_smiles_corpora:
-    cmd: python src/rxitect/features/generate_smiles_corpora.py
-    deps:
-    - data/raw/chembl_26.sdf.gz
-    - data/raw/ligand_raw.tsv
-    outs:
-    - data/processed/smiles_chembl_corpus.txt
-    - data/processed/smiles_ligand_corpus.txt
-    - data/processed/smiles_voc.txt
-  fine_tune_selfies_lstm:
-    cmd: python src/rxitect/training/fine_tune_selfies_rnn.py
-    deps:
-    - data/processed/selfies_voc.txt
-    - models/pretrained_selfies_rnn.ckpt
-    outs:
-    - models/fine_tuned_selfies_rnn.ckpt
-  train_predictors:
-    cmd: python src/rxitect/training/train_predictors.py
-    deps:
-    - data/raw/ligand_raw.tsv
-    outs:
-    - models/RF_REG_CHEMBL226.pkg
-    - models/RF_REG_CHEMBL240.pkg
-    - models/RF_REG_CHEMBL251.pkg
+    - data/final:
+        persist: true
+    - models:
+        persist: true

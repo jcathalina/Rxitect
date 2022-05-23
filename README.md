@@ -1,37 +1,98 @@
-# Rxitect
-[![License](https://img.shields.io/github/license/naisuu/rxitect)](https://github.com/naisuu/rxitect/blob/main/LICENSE)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black) 
-[![version](https://img.shields.io/github/v/release/naisuu/rxitect)](https://github.com/naisuu/rxitect/releases)
+# rxitect
 
-Rxitect was created for the purpose of experimenting with the development and implementation of retrosynthesis engines within molecular generators for the goal of de novo drug design; the focus of [my Master's thesis](TODO).
-The code in this repository is based on [DrugEx](https://github.com/XuhanLiu/DrugEx), released by Xuhan Liu (First Author) and Gerard J.P. van Westen (Correspondent Author) on March 8th, 2021. The same license terms apply for this repository, and can be found in the LICENSE file.
+## Tools used in this project
+* [Poetry](https://towardsdatascience.com/how-to-effortlessly-publish-your-python-package-to-pypi-using-poetry-44b305362f9f): Dependency management - [article](https://towardsdatascience.com/how-to-effortlessly-publish-your-python-package-to-pypi-using-poetry-44b305362f9f)
+* [hydra](https://hydra.cc/): Manage configuration files - [article](https://towardsdatascience.com/introduction-to-hydra-cc-a-powerful-framework-to-configure-your-data-science-projects-ed65713a53c6)
+* [pre-commit plugins](https://pre-commit.com/): Automate code reviewing formatting  - [article](https://towardsdatascience.com/4-pre-commit-plugins-to-automate-code-reviewing-and-formatting-in-python-c80c6d2e9f5?sk=2388804fb174d667ee5b680be22b8b1f)
+* [DVC](https://dvc.org/): Data version control - [article](https://towardsdatascience.com/introduction-to-dvc-data-version-control-tool-for-machine-learning-projects-7cb49c229fe0)
+* [pdoc](https://github.com/pdoc3/pdoc): Automatically create an API documentation for your project
 
-## Getting started
-After cloning this repository, make sure you have a conda distribution installed. We recommend [miniforge](https://github.com/conda-forge/miniforge) for licensing reasons, but anaconda/miniconda will work as well.
+## Project structure
+```bash
+.
+├── config                      
+│   ├── main.yaml                   # Main configuration file
+│   ├── model                       # Configurations for training model
+│   │   ├── model1.yaml             # First variation of parameters to train model
+│   │   └── model2.yaml             # Second variation of parameters to train model
+│   └── process                     # Configurations for processing data
+│       ├── process1.yaml           # First variation of parameters to process data
+│       └── process2.yaml           # Second variation of parameters to process data
+├── data            
+│   ├── final                       # data after training the model
+│   ├── processed                   # data after processing
+│   ├── raw                         # raw data
+│   └── raw.dvc                     # DVC file of data/raw
+├── docs                            # documentation for your project
+├── dvc.yaml                        # DVC pipeline
+├── .flake8                         # configuration for flake8 - a Python formatter tool
+├── .gitignore                      # ignore files that cannot commit to Git
+├── Makefile                        # store useful commands to set up the environment
+├── models                          # store models
+├── notebooks                       # store notebooks
+├── .pre-commit-config.yaml         # configurations for pre-commit
+├── pyproject.toml                  # dependencies for poetry
+├── README.md                       # describe your project
+├── src                             # store source code
+│   ├── __init__.py                 # make src a Python module 
+│   ├── process.py                  # process data before training model
+│   └── train_model.py              # train model
+└── tests                           # store tests
+    ├── __init__.py                 # make tests a Python module 
+    ├── test_process.py             # test functions for process.py
+    └── test_train_model.py         # test functions for train_model.py
+```
 
-### Installing the environment
-- `conda env create -f environment.yml`
-- `conda activate rxitect`
-- `pip install -e .`
+## Set up the environment
+1. Install [Poetry](https://python-poetry.org/docs/#installation)
+2. Set up the environment:
+```bash
+make activate
+make setup
+```
 
-#### Mamba
-Mamba is a drop-in replacement for conda, it's much faster at resolving environments and is recommended.
-You can install it by running `conda install -c conda-forge mamba`.
-In case you want to use this from the start, replace `conda` with `mamba` in the instructions above.
+## Install new packages
+To install new PyPI packages, run:
+```bash
+poetry add <package-name>
+```
 
-# Data Version Control (DVC)
-This project uses DVC to version control large data files and trained models on [DagsHub](https://dagshub.com/naisuu/rxitect).
-To use DVC, run the following commands:
-- `conda install -c conda-forge mamba`
-- `mamba install -c conda-forge dvc`
+## Run the entire pipeline
+To run the entire pipeline, type:
+```bash
+dvc repo
+```
 
+## Version your data
+Read [this article](https://towardsdatascience.com/introduction-to-dvc-data-version-control-tool-for-machine-learning-projects-7cb49c229fe0) on how to use DVC to version your data.
 
-# Known development issues
-- black requires specific versions of typing-extensions, so you may need to run `pip install typing-extensions --upgrade` first.
-- If you are developing on windows, we recommend to download pytorch manually to fit your needs, e.g.: `conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch`.
-- If you run into issues after importing torch, try running `conda install -c defaults intel-openmp -f`.
-- If you are developing on a mac, you may run into issues with xgboost. To fix this, you need to have cmake installed, which can be done by running the following commands (assuming you have brew installed): `brew install gcc@11`, followed by `brew install cmake`. Note that because RA Score has a hard dependency on tensorflow-gpu to run their pretrained models, development on a mac is currently limited to just the base functionality of Rxitect (unless you have a CUDA-compatible GPU).
-- there's a recent (as of February 7, 2022) bug in rdkit where you could not import it or its modules properly if you have `boost-cpp=1.74.0=h359cf19_6`. If you run into this issue, update it by conda/mamba installing boost-cpp again.
+Basically, you start with setting up a remote storage. The remote storage is where your data is stored. You can store your data on DagsHub, Google Drive, Amazon S3, Azure Blob Storage, Google Cloud Storage, Aliyun OSS, SSH, HDFS, and HTTP.
 
-# Additional information
-The paper that accompanies the original DrugEx code can be found [here](https://chemrxiv.org/engage/chemrxiv/article-details/60c75834469df47f67f455b9).
+```bash
+dvc remote add -d remote <REMOTE-URL>
+```
+
+Commit the config file:
+```bash
+git commit .dvc/config -m "Configure remote storage"
+```
+
+Push the data to remote storage:
+```bash
+dvc push 
+```
+
+Add and push all changes to Git:
+```bash
+git add .
+git commit -m 'commit-message'
+git push origin <branch>
+```
+
+# Auto-generate API documentation
+
+To auto-generate API document for your project, run:
+
+```bash
+make docs
+```

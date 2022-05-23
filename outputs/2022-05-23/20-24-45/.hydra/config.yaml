@@ -1,0 +1,16 @@
+process:
+  use_columns:
+  - col1
+  - col2
+model:
+  name: model1
+raw:
+  path: data/raw/sample.csv
+processed:
+  dir: data/processed
+  name: processed.csv
+  path: ${processed.dir}/${processed.name}
+final:
+  dir: data/final
+  name: final.csv
+  path: ${final.dir}/${final.name}

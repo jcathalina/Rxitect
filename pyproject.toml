@@ -1,6 +1,45 @@
+[tool.poetry]
+name = "rxitect"
+version = "0.1.1"
+description = ""
+authors = ["Julius Cathalina <julius.cathalina@vuw.leidenuniv.nl>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+dvc = "^2.10.0"
+hydra-core = "^1.1.1"
+pdoc3 = "^0.10.0"
+notebook = "^6.4.10"
+seaborn = "^0.11.2"
+pandas = "^1.4.2"
+numpy = "^1.22.4"
+scikit-learn = "^1.1.1"
+rdkit-pypi = "^2022.3.2"
+torch = {url = "https://download.pytorch.org/whl/cu113/torch-1.11.0%2Bcu113-cp38-cp38-linux_x86_64.whl"}
+
+
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+pre-commit = "^2.17.0"
+jupyterlab = "^3.4.2"
+
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 79
+include = '\.pyi?$'
+exclude = '''
+/(
+	\.git
+| \.hg
+| \.mypy_cache
+| \.tox
+| \.venv
+| _build
+| buck-out
+| build   
+)/ 
+'''

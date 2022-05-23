@@ -1,5 +1,0 @@
-hyperparams:
-  embed_size: 128
-  hidden_size: 512
-  is_lstm: true
-  lr: 0.001
