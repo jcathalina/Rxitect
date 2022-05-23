@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "rxitect"
 version = "0.1.1"
-description = ""
+description = "De-novo Drug Design using Deep Reinforcement Learning guided by Retrosynthetic Accessibility scores."
 authors = ["Julius Cathalina <julius.cathalina@vuw.leidenuniv.nl>"]
 
 [tool.poetry.dependencies]
