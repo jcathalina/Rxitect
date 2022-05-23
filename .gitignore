@@ -25,3 +25,7 @@ models/RF_REG_CHEMBL251.cv.tsv
 models/RF_REG_CHEMBL251.ind.tsv
 models/selfies_lstm_epoch=14-step=44879.ckpt
 models/selfies_lstm_epoch=21-step=65823.ckpt
+
+# logs
+/wandb
+/outputs

@@ -1,0 +1,17 @@
+defaults:
+  - process: process_qsar_data
+  - model: model1
+  - _self_
+
+raw: 
+  path: ${hydra:runtime.cwd}/data/raw/ligand_raw.tsv
+
+processed:
+  dir: ${hydra:runtime.cwd}/data/processed
+  name: ligand_proc.csv
+  path: ${processed.dir}/${processed.name}
+
+final:
+  dir: ${hydra:runtime.cwd}/data/final
+  name: ligand_final.csv
+  path: ${final.dir}/${final.name}

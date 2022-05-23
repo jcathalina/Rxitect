@@ -1,0 +1,13 @@
+target_chembl_ids: ["CHEMBL226", "CHEMBL240", "CHEMBL251"]
+relevant_cols: [
+        "target_chembl_id",
+        "smiles",
+        "pchembl_value",
+        "comment",
+        "standard_type",
+        "standard_relation",
+        "document_year",
+    ]
+to_classifier: true
+px_undef_val: 3.99
+px_active_thresh: 6.5
