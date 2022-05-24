@@ -24,6 +24,7 @@ wandb = "^0.12.16"
 pytest = "^6.2.5"
 pre-commit = "^2.17.0"
 jupyterlab = "^3.4.2"
+mypy = "^0.950"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
