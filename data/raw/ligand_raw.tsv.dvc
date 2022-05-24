@@ -1,0 +1,4 @@
+outs:
+- md5: 096617ac986c20cd4269972be7bf92b0
+  size: 40685983
+  path: ligand_raw.tsv
