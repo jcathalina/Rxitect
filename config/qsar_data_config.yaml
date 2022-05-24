@@ -9,7 +9,7 @@ params:
             "standard_relation",
             "document_year",
           ]
-    classification: true
+    classification: false
     px_placeholder: 3.99
     px_thresh: 6.5
     train_size: 0.2
