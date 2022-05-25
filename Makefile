@@ -1,10 +1,13 @@
+.ONESHELL:
 .PHONY: notebook docs
 .EXPORT_ALL_VARIABLES:
 
+SHELL=/bin/bash
+CONDA_ACTIVATE=source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
+
 install: 
 	@echo "Installing..."
-	poetry install
-	poetry run pre-commit install
+	conda create -f environment.yaml
 	git rm -r --cached 'data/raw'
 	git rm -r --cached 'data/processed'
 	git rm -r --cached 'data/final'
@@ -12,13 +15,13 @@ install:
 
 activate:
 	@echo "Activating virtual environment"
-	poetry shell
+	$(CONDA_ACTIVATE) rxt
 
 initialize_git:
 	git init 
 
 pull_data:
-	poetry run dvc pull
+	dvc pull -r origin
 
 setup: initialize_git install
 
