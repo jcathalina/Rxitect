@@ -1,8 +1,14 @@
+from dataclasses import dataclass
 import hydra
 import pandas as pd
+import numpy as np
+import joblib
 from hydra.core.config_store import ConfigStore
+from rdkit import Chem
+from tqdm import tqdm
 
 from src.structs.qsar_data_config import QSARDataConfig
+from src.models.predictor import Predictor
 
 cs = ConfigStore.instance()
 cs.store(name="qsar_data", node=QSARDataConfig)
@@ -58,21 +64,30 @@ def process_qsar_data(cfg: QSARDataConfig) -> pd.DataFrame:
 
 def write_training_data(
     df: pd.DataFrame,
-    dir: str,
-    train_data: str,
+    out_path: str,
     random_seed: int,
 ) -> None:
     """Function that divides the training data based on chemical diversity, into the
-    appropriate train/test/val sets and writes them to their respective files.
+    appropriate training data format and writes it to a file.
 
     Args:
         df: A DataFrame containing the cleaned ChEMBL data prepared for QSAR model training.
-        train_data: Filepath to where the train data should be stored.
+        out_path: Filepath to where the train data should be stored.
         random_seed: Number of random seed to ensure reproducibility of experiments.
-        test_size: Fraction of data that should be held out for the test set.
-        val_size: Fraction of data that should be held out for the validation set.
     """
-    raise NotImplementedError
+    df = df.sample(frac=1, random_state=random_seed)
+    mols = [Chem.MolFromSmiles(mol) for mol in tqdm(df["smiles"], desc="Converting SMILES to Mol objects")]
+    X = Predictor.calc_fp(mols=mols)
+    y = df["pchembl_value"]
+    
+    train_data = LigandTrainingData(X=X, y=y)
+    joblib.dump(train_data, filename=out_path)
+
+
+@dataclass
+class LigandTrainingData:
+    X: np.ndarray
+    y: np.ndarray
 
 
 @hydra.main(config_path="../../config", config_name="qsar_data_config")
@@ -84,9 +99,8 @@ def main(cfg: QSARDataConfig):
     df.to_csv(cfg.processed.path)
 
     write_training_data(
-        df=df,
-        dir=cfg.files.dir,
-        train_data=cfg.files.train_data,
+        df=pd.read_csv(cfg.processed.path),
+        out_path=cfg.files.train_data,
         random_seed=cfg.params.random_seed,
     )
 

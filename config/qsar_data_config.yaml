@@ -26,4 +26,4 @@ processed:
 
 files:
   dir: ${hydra:runtime.cwd}/data/final
-  train_data: ${files.dir}/ligand_train_data.csv
+  train_data: ${files.dir}/ligand_train_data.pkl

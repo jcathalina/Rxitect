@@ -6,6 +6,7 @@ import numpy as np
 import rdkit.Chem
 from rdkit import DataStructs
 from rdkit.Chem import AllChem
+from tqdm import tqdm
 
 from src.structs.property import Property
 
@@ -28,7 +29,7 @@ class Predictor:
     @classmethod
     def calc_ecfp(cls, mols, radius: int = 3, bit_len: int = 2048):
         fps = np.zeros((len(mols), bit_len))
-        for i, mol in enumerate(mols):
+        for i, mol in enumerate(tqdm(mols, desc="Calculating Extended-Connectivity Fingerprints")):
             try:
                 if isinstance(mol, str):
                     mol = rdkit.Chem.MolFromSmiles(
@@ -69,7 +70,7 @@ class Predictor:
         ]
         fps = np.zeros((len(mols), 19))
         props = Property()
-        for i, prop in enumerate(prop_list):
+        for i, prop in enumerate(tqdm(prop_list, desc="Calculating physico-chemical properties")):
             props.prop = prop
             fps[:, i] = props(mols)
         return fps
