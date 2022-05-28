@@ -5,8 +5,8 @@ Author: Khuyen Tran
 """
 
 import hydra
-from omegaconf import DictConfig
 from hydra.utils import to_absolute_path as abspath
+from omegaconf import DictConfig
 
 
 @hydra.main(config_path="../config", config_name="main")

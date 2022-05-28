@@ -1,5 +1,5 @@
-Module src.qsar.models.predictor
-================================
+Module src.models.predictor
+===========================
 
 Classes
 -------

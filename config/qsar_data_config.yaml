@@ -12,8 +12,9 @@ params:
     classification: false
     px_placeholder: 3.99
     px_thresh: 6.5
-    train_size: 0.2
-    val_size: 0.1
+    train_size: 0.0
+    val_size: 0.0
+    random_seed: 42
 
 raw: 
   path: ${hydra:runtime.cwd}/data/raw/ligand_raw.tsv
@@ -26,5 +27,3 @@ processed:
 files:
   dir: ${hydra:runtime.cwd}/data/final
   train_data: ${files.dir}/ligand_train_data.csv
-  test_data: ${files.dir}/ligand_test_data.csv
-  val_data: ${files.dir}/ligand_val_data.csv

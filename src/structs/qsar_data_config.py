@@ -16,7 +16,9 @@ class Params:
         px_thresh: The pX value threshold where a compound is considered active, applicable when the data needs to be transformed into binary.
         train_size: The fraction of the data that should be held out for testing.
         val_size: The fraction of the data that should be held out for validation.
+        random_seed: The random seed number used to reproduce experiments
     """
+
     targets: List[str]
     cols: List[str]
     classification: bool
@@ -24,26 +26,30 @@ class Params:
     px_thresh: float
     train_size: float
     val_size: float
+    random_seed: int
 
 
 @dataclass
 class Raw:
     """Data related to the raw files associated with the data used for QSAR model training.
-    
+
     Args:
         path: The filepath to the raw data file.
     """
+
     path: str
+
 
 @dataclass
 class Processed:
     """Data related to the processed files associated with the data used for QSAR model training.
-    
+
     Args:
         dir: The directory where processed files should be stored.
         name: The name that the processed file should have.
         path: The filepath to the raw data file.
     """
+
     dir: str
     name: str
     path: str
@@ -52,22 +58,22 @@ class Processed:
 @dataclass
 class Files:
     """Data related to the final files associated with the data used for QSAR model training.
-    
+
     Args:
         dir: The directory where final files should be stored.
         train_data: The filepath of the file where the train data is stored.
         test_data: The filepath of the file where the test data is stored.
         val_data: The filepath of the file where the validation data is stored.
     """
+
     dir: str
     train_data: str
-    test_data: str
-    val_data: str
 
 
 @dataclass
 class QSARDataConfig:
     """Configuration object that defines all data necessary for QSAR processing"""
+
     params: Params
     raw: Raw
     processed: Processed

@@ -31,11 +31,17 @@ class Predictor:
         for i, mol in enumerate(mols):
             try:
                 if isinstance(mol, str):
-                    mol = rdkit.Chem.MolFromSmiles(mol)  # Make Mol object before calculating morgan FP or else it breaks.
-                fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=bit_len)
+                    mol = rdkit.Chem.MolFromSmiles(
+                        mol
+                    )  # Make Mol object before calculating morgan FP or else it breaks.
+                fp = AllChem.GetMorganFingerprintAsBitVect(
+                    mol, radius=radius, nBits=bit_len
+                )
                 DataStructs.ConvertToNumpyArray(fp, fps[i, :])
             except Exception as e:
-                logging.error(f"Something went wrong while creating fingerprints: {e}")
+                logging.error(
+                    f"Something went wrong while creating fingerprints: {e}"
+                )
         return fps
 
     @classmethod

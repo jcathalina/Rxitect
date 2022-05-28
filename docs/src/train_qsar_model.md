@@ -1,5 +1,5 @@
-Module src.train_qsar
-=====================
+Module src.train_qsar_model
+===========================
 # Example W&B Tracking for sklearn
 wandb.init(project="my-test-project", entity="rxitect")
 
