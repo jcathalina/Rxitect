@@ -1,11 +1,8 @@
 import selfies as sf
 from rdkit import Chem
-from typing import TYPE_CHECKING
 
 from src.utils.exceptions import RxMolException
-
-if TYPE_CHECKING:
-    from src.utils.types import RDKitMol, Fingerprints, Optional
+from src.utils.types import Fingerprints, Optional, RDKitMol
 
 
 class RxMol:

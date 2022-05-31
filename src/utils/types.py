@@ -1,16 +1,9 @@
 """ Module containing all types and type imports.
     Approach borrowed from https://github.com/MolecularAI/aizynthfinder.
 """
-import numpy as np
-from typing import (
-    Any,
-    Dict,
-    Union,
-    Tuple,
-    Optional,
-    List
-)
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 from rdkit import Chem
 
 StrDict = Dict[str, Any]

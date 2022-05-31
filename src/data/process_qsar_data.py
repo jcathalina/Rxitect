@@ -1,12 +1,13 @@
 import hydra
-import pandas as pd
 import joblib
+import pandas as pd
 from hydra.core.config_store import ConfigStore
 from rdkit import Chem
 from tqdm import tqdm
 
-from src.data.utils import LigandTrainingData, QSARDataConfig
-from src.models.predictor import Predictor
+from src.chem.utils import calc_fp
+from src.config.qsar_data_config import QSARDataConfig
+from src.data.utils import LigandTrainingData
 
 cs = ConfigStore.instance()
 cs.store(name="qsar_data", node=QSARDataConfig)
@@ -74,10 +75,13 @@ def write_training_data(
         random_seed: Number of random seed to ensure reproducibility of experiments.
     """
     df = df.sample(frac=1, random_state=random_seed)
-    mols = [Chem.MolFromSmiles(mol) for mol in tqdm(df["smiles"], desc="Converting SMILES to Mol objects")]
-    X = Predictor.calc_fp(mols=mols)
+    mols = [
+        Chem.MolFromSmiles(mol)
+        for mol in tqdm(df["smiles"], desc="Converting SMILES to Mol objects")
+    ]
+    X = calc_fp(mols=mols)
     y = df["pchembl_value"]
-    
+
     train_data = LigandTrainingData(X=X, y=y)
     joblib.dump(train_data, filename=out_path)
 
