@@ -1,3 +1,5 @@
+import numpy as np
+
 from dataclasses import dataclass
 from typing import List
 
@@ -78,3 +80,9 @@ class QSARDataConfig:
     raw: Raw
     processed: Processed
     files: Files
+
+
+@dataclass
+class LigandTrainingData:
+    X: np.ndarray
+    y: np.ndarray

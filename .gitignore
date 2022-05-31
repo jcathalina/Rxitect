@@ -9,6 +9,7 @@ test_smiles.txt
 .vscode
 lightning_logs
 /artifacts
+/.mypy_cache
 
 # log files
 logs/*.log

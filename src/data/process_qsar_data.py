@@ -1,13 +1,11 @@
-from dataclasses import dataclass
 import hydra
 import pandas as pd
-import numpy as np
 import joblib
 from hydra.core.config_store import ConfigStore
 from rdkit import Chem
 from tqdm import tqdm
 
-from src.structs.qsar_data_config import QSARDataConfig
+from src.data.utils import LigandTrainingData, QSARDataConfig
 from src.models.predictor import Predictor
 
 cs = ConfigStore.instance()
@@ -82,12 +80,6 @@ def write_training_data(
     
     train_data = LigandTrainingData(X=X, y=y)
     joblib.dump(train_data, filename=out_path)
-
-
-@dataclass
-class LigandTrainingData:
-    X: np.ndarray
-    y: np.ndarray
 
 
 @hydra.main(config_path="../../config", config_name="qsar_data_config")
