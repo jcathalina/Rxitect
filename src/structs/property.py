@@ -1,3 +1,6 @@
+import os
+import sys
+from enum import Enum
 import numpy as np
 from rdkit.Chem import (
     AllChem,
@@ -8,25 +11,45 @@ from rdkit.Chem import (
 )
 from rdkit.Chem.GraphDescriptors import BertzCT
 from rdkit.Chem.QED import qed
-from typing import TYPE_CHECKING
+
+from src.utils.types import RDKitMol, List
 
 # special snippet to import SA Score, from https://github.com/rdkit/rdkit/issues/2279
-import os
-import sys
-
 sys.path.append(os.path.join(RDConfig.RDContribDir, "SA_Score"))
 import sascorer  # type: ignore
 
-if TYPE_CHECKING:
-    from src.utils.types import RDKitMol, List
 
-# TODO: Make prop dict keys use enums
+class Property(Enum):
+    MolecularWeight = "MW"
+    LogP = "logP"
+    HBA = "HBA"
+    HBD = "HBD"
+    RotatableBonds = "Rotatable"
+    AmideBonds = "Amide"
+    BridgeheadAtoms = "Bridge"
+    HeteroAtoms = "Hetero"
+    HeavyAtoms = "Heavy"
+    SpiroAtoms = "Spiro"
+    FCSP3 = "FCSP3"
+    RingCount = "Ring"
+    AliphaticRings = "Aliphatic"
+    AromaticRings = "Aromatic"
+    SaturatedRings = "Saturated"
+    Heterocycles = "HeteroR"
+    TPSA = "TPSA"
+    ValenceElectrons = "Valence"
+    CrippenMolMR = "MR"
+    QED = "QED"
+    SyntheticAccessibility = "SA"
+    BertzComplexity = "Bertz" 
+
+
 prop_dict = {
     "MW": Descriptors.MolWt,
     "logP": Crippen.MolLogP,
     "HBA": AllChem.CalcNumLipinskiHBA,
     "HBD": AllChem.CalcNumLipinskiHBD,
-    "Rotable": AllChem.CalcNumRotatableBonds,
+    "Rotatable": AllChem.CalcNumRotatableBonds,
     "Amide": AllChem.CalcNumAmideBonds,
     "Bridge": AllChem.CalcNumBridgeheadAtoms,
     "Hetero": AllChem.CalcNumHeteroatoms,
@@ -47,7 +70,7 @@ prop_dict = {
 }
 
 
-def calculate(mols: List[RDKitMol], prop: str) -> np.ndarray:
+def calc_prop(mols: List[RDKitMol], prop: str) -> np.ndarray:
     """Calculates the value of a molecular property for a batch of molecules.
 
     Args:
