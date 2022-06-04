@@ -31,3 +31,5 @@ models/selfies_lstm_epoch=21-step=65823.ckpt
 /wandb
 */wandb
 /outputs
+*/Untitled*.ipynb
+models/*

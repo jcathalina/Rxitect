@@ -86,7 +86,7 @@ def write_training_data(
     joblib.dump(train_data, filename=out_path)
 
 
-@hydra.main(config_path="../../config", config_name="qsar_data_config")
+@hydra.main(config_path="../config", config_name="config")
 def main(cfg: QSARDataConfig):
     df = process_qsar_data(cfg=cfg)
     if cfg.params.classification:

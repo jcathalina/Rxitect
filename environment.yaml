@@ -1,12 +1,11 @@
 name: rxt
 
 channels:
-  - pytorch
   - conda-forge
   - defaults
 
 dependencies:
-  - python=3.8
+  - python=3.9
   - pip=22.1.1
   - pytorch-lightning=1.6.3
   - dvc=2.10.0

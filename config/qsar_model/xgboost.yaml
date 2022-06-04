@@ -1,0 +1,8 @@
+name: xgboost
+classification: false
+params:
+  n_estimators: 1000
+  learning_rate: 0.3
+  tree_method: "hist"
+  gpu_id: 0
+  eval_metric: "mae"

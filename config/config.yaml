@@ -1,4 +1,8 @@
 defaults:
-  - model:
-    - qsar: xgboost
-    - generative: lstm
+  - _self_
+  - qsar_model: xgboost
+  - qsar_dataset: ligand
+  - generative_model: transformer
+
+random_state: 42
+model_path: ${hydra:runtime.cwd}/models/${qsar_model.name}.pkl

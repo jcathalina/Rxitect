@@ -1,48 +1,73 @@
-"""
-# Example W&B Tracking for sklearn
-wandb.init(project="my-test-project", entity="rxitect")
+from enum import Enum
 
-
-# Load data
-housing = datasets.fetch_california_housing()
-X = pd.DataFrame(housing.data, columns=housing.feature_names)
-y = housing.target
-X, y = X[::2], y[::2]  # subsample for faster demo
-wandb.errors.term._show_warnings = False
-# ignore warnings about charts being built from subset of data
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-
-# Train model, get predictions
-reg = Ridge()
-reg.fit(X_train, y_train)
-y_pred = reg.predict(X_test)
-
-wandb.sklearn.plot_regressor(reg, X_train, X_test, y_train, y_test, model_name='Ridge')
-
-wandb.finish()
-"""
-"""
-This is the demo code that uses hy                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      dra to access the parameters in under the directory config.
-
-Author: Khuyen Tran 
-"""
 import hydra
+import joblib
+import xgboost as xgb
 from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
+from sklearn import preprocessing
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import train_test_split
+
+import wandb
+from src.data.utils import LigandTrainingData
 
 
-@hydra.main(config_path="../config", config_name="qsar_train_config")
-def train_model(config: DictConfig):
+class QSARModel(str, Enum):
+    XGB = "xgboost"
+    RF = "random_forest"
+
+
+@hydra.main(config_path="../config", config_name="config", version_base=None)
+def main(cfg: DictConfig) -> None:
     """Function to train the model"""
 
-    input_path = abspath(config.processed.path)
-    output_path = abspath(config.final.path)
+    wandb.init(project="train-qsar-model")
 
-    print(f"Train modeling using {input_path}")
-    print(f"Model used: {config.model.name}")
-    print(f"Save the output to {output_path}")
+    dataset_path = abspath(cfg.qsar_dataset.files.train_data)
+    output_path = abspath(cfg.model_path)
+
+    # TODO: Make log
+    print(f"Train modeling using {dataset_path}")
+    print(f"Model used: {cfg.qsar_model.name}")
+    print(f"Model params: {cfg.qsar_model.params}")
+    print(
+        f"Save the output to {output_path}"
+    )  # TODO: specify if reg/clf in filename?
+
+    dataset = joblib.load(dataset_path)
+    X, y = dataset.X, dataset.y.values
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=cfg.random_state
+    )
+
+    model = None
+    if cfg.qsar_model.name == QSARModel.XGB:
+        model = xgb.XGBRegressor(**cfg.qsar_model.params)
+    elif cfg.qsar_model.name == QSARModel.RF:
+        model = RandomForestRegressor(**cfg.qsar_model.params)
+    else:
+        raise Exception
+
+    model.fit(
+        X=X_train,
+        y=y_train,
+        sample_weight=[1.0 if px_val >= 4 else 0.1 for px_val in y_train],
+    )
+    joblib.dump(model, output_path)
+
+    wandb.sklearn.plot_regressor(
+        model, X_train, X_test, y_train, y_test, model_name=cfg.qsar_model.name
+    )
+    score = model.score(
+        X=X_test,
+        y=y_test,
+        sample_weight=[1.0 if px_val >= 4 else 0.1 for px_val in y_test],
+    )
+    print(f"score: {score}")
+    wandb.finish()
 
 
 if __name__ == "__main__":
-    train_model()
+    main()
