@@ -8,8 +8,7 @@ channels:
 dependencies:
   - python=3.8
   - pip=22.1.1
-  - cudatoolkit=11.3
-  - pytorch=1.11
+  - pytorch-lightning=1.6.3
   - dvc=2.10.0
   - hydra-core=1.1.1
   - notebook=6.4.10
