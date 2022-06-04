@@ -14,8 +14,6 @@ class Params:
         classification: A flag that determines if the final pX values should be transformed into binary (if a classification model is being used).
         px_placeholder: The float value that should be used for rows with missing pX values.
         px_thresh: The pX value threshold where a compound is considered active, applicable when the data needs to be transformed into binary.
-        train_size: The fraction of the data that should be held out for testing.
-        val_size: The fraction of the data that should be held out for validation.
         random_seed: The random seed number used to reproduce experiments
     """
 
@@ -24,8 +22,6 @@ class Params:
     classification: bool
     px_placeholder: float
     px_thresh: float
-    train_size: float
-    val_size: float
     random_seed: int
 
 

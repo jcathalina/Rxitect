@@ -1,0 +1,4 @@
+defaults:
+  - model:
+    - qsar: xgboost
+    - generative: lstm
