@@ -6,7 +6,6 @@ import numpy as np
 from rdkit.Chem import AllChem, Crippen, Descriptors, Lipinski, RDConfig
 from rdkit.Chem.GraphDescriptors import BertzCT
 from rdkit.Chem.QED import qed
-
 from src.utils.types import List, RDKitMol
 
 # special snippet to import SA Score, from https://github.com/rdkit/rdkit/issues/2279

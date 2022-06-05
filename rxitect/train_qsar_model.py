@@ -9,9 +9,9 @@ from sklearn import preprocessing
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
+from src.data.utils import LigandTrainingData
 
 import wandb
-from src.data.utils import LigandTrainingData
 
 
 class QSARModel(str, Enum):

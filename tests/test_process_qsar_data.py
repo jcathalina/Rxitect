@@ -1,6 +1,5 @@
 import pytest
 from hydra import compose, initialize
-
 from src.process_qsar_data import process_qsar_data
 
 

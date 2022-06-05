@@ -3,11 +3,10 @@ import joblib
 import pandas as pd
 from hydra.core.config_store import ConfigStore
 from rdkit import Chem
-from tqdm import tqdm
-
 from src.chem.utils import calc_fp
 from src.config.qsar_data_config import QSARDataConfig
 from src.data.utils import LigandTrainingData
+from tqdm import tqdm
 
 cs = ConfigStore.instance()
 cs.store(name="qsar_data", node=QSARDataConfig)
