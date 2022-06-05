@@ -21,6 +21,7 @@ wandb = "^0.12.16"
 pytorch-lightning = "^1.6.4"
 selfies = "^2.1.0"
 xgboost = "^1.6.1"
+tqdm = "^4.42.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
