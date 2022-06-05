@@ -3,9 +3,9 @@ import joblib
 import pandas as pd
 from hydra.core.config_store import ConfigStore
 from rdkit import Chem
-from src.chem.utils import calc_fp
-from src.config.qsar_data_config import QSARDataConfig
-from src.data.utils import LigandTrainingData
+from rxitect.chem.utils import calc_fp
+from rxitect.config.qsar_data_config import QSARDataConfig
+from rxitect.data.utils import LigandTrainingData
 from tqdm import tqdm
 
 cs = ConfigStore.instance()

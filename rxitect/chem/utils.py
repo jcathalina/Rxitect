@@ -4,8 +4,8 @@ import numpy as np
 import rdkit.Chem
 from rdkit import DataStructs
 from rdkit.Chem import AllChem
-from src.structs.property import Property, calc_prop
-from src.utils.types import RDKitMol
+from rxitect.structs.property import Property, calc_prop
+from rxitect.utils.types import RDKitMol
 from tqdm import tqdm
 
 

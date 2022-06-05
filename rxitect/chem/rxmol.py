@@ -1,7 +1,7 @@
 import selfies as sf
 from rdkit import Chem
-from src.utils.exceptions import RxMolException
-from src.utils.types import Fingerprints, Optional, RDKitMol
+from rxitect.utils.exceptions import RxMolException
+from rxitect.utils.types import Fingerprints, Optional, RDKitMol
 
 
 class RxMol:
