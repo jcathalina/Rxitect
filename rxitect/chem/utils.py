@@ -4,9 +4,10 @@ import numpy as np
 import rdkit.Chem
 from rdkit import DataStructs
 from rdkit.Chem import AllChem
+from tqdm import tqdm
+
 from rxitect.structs.property import Property, calc_prop
 from rxitect.utils.types import RDKitMol
-from tqdm import tqdm
 
 
 def calc_fp(mols: RDKitMol, radius: int = 3, bit_len: int = 2048):

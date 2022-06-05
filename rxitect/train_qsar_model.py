@@ -2,6 +2,7 @@ from enum import Enum
 
 import hydra
 import joblib
+from sklearn.svm import SVR
 import xgboost as xgb
 from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
@@ -17,11 +18,12 @@ from rxitect.data.utils import LigandTrainingData
 class QSARModel(str, Enum):
     XGB = "xgboost"
     RF = "random_forest"
+    SVM = "svm"
 
 
 @hydra.main(config_path="../config", config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
-    """Function to train the model"""
+    """Function to train QSAR model"""
 
     wandb.init(project="train-qsar-model")
 
@@ -47,8 +49,12 @@ def main(cfg: DictConfig) -> None:
         model = xgb.XGBRegressor(**cfg.qsar_model.params)
     elif cfg.qsar_model.name == QSARModel.RF:
         model = RandomForestRegressor(**cfg.qsar_model.params)
+    elif cfg.qsar_model.name == QSARModel.SVM:
+        model = SVR(**cfg.qsar_model.params)
     else:
-        raise Exception
+        raise Exception(
+            f"Chosen model '{cfg.qsar_model.name}' does not exist."
+        )
 
     model.fit(
         X=X_train,

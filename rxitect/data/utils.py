@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Tuple
 
 import numpy as np
@@ -11,6 +12,12 @@ class LigandTrainingData:
     X: np.ndarray
     y: np.ndarray
 
+
+class QSARModel(str, Enum):
+    XGB = "xgboost"
+    RF = "random_forest"
+    SVM = "svm"
+    
 
 def train_test_val_split(
     X: ArrayLike,

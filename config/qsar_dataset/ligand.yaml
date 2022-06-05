@@ -1,28 +1,24 @@
-params:
-  targets: ["CHEMBL226", "CHEMBL240", "CHEMBL251"]
-  cols: [
-          "target_chembl_id",
-          "smiles",
-          "pchembl_value",
-          "comment",
-          "standard_type",
-          "standard_relation",
-          "document_year",
-        ]
-  classification: false
-  px_placeholder: 3.99
-  px_thresh: 6.5
-  train_size: 0.2
-  val_size: 0.1
-  random_seed: 42
+targets: ["CHEMBL226", "CHEMBL240", "CHEMBL251"]
+cols: [
+        "target_chembl_id",
+        "smiles",
+        "pchembl_value",
+        "comment",
+        "standard_type",
+        "standard_relation",
+        "document_year",
+      ]
+classification: false
+px_placeholder: 3.99
+px_thresh: 6.5
+train_size: 0.2
+val_size: 0.1
 
-raw: 
-  path: ${hydra:runtime.cwd}/data/raw/ligand_raw.tsv
+raw:
+  path: data/raw/ligand_raw.tsv
 
 processed:
-  dir: ${hydra:runtime.cwd}/data/processed
-  name: ligand_proc.csv
-  path: ${processed.dir}/${processed.name}
+  path: data/processed/ligand_proc.csv
 
-files:
-  train_data: data/final/ligand_train_data.pkl
+final:
+  path: data/final/ligand_train_data.pkl

@@ -1,18 +1,23 @@
+from typing import List
+
 import hydra
 import joblib
 import pandas as pd
-from hydra.core.config_store import ConfigStore
+from hydra.utils import to_absolute_path as abspath
+from omegaconf import DictConfig
 from rdkit import Chem
-from rxitect.chem.utils import calc_fp
-from rxitect.config.qsar_data_config import QSARDataConfig
-from rxitect.data.utils import LigandTrainingData
 from tqdm import tqdm
 
-cs = ConfigStore.instance()
-cs.store(name="qsar_data", node=QSARDataConfig)
+from rxitect.chem.utils import calc_fp
+from rxitect.data.utils import LigandTrainingData
 
 
-def process_qsar_data(cfg: QSARDataConfig) -> pd.DataFrame:
+def transform(
+    raw_path: str,
+    targets: List[str],
+    cols: List[str],
+    px_placeholder: float,
+) -> pd.DataFrame:
     """Function that loads and processed ChEMBL data for specific ligands
     to be used for training QSAR models.
 
@@ -26,13 +31,13 @@ def process_qsar_data(cfg: QSARDataConfig) -> pd.DataFrame:
         features that will be used in the training of a QSAR model.
     """
     # Load
-    df = pd.read_csv(cfg.raw.path, sep="\t")
+    df = pd.read_csv(raw_path, sep="\t")
     df.columns = df.columns.str.lower()
     df.dropna(subset=["smiles"], inplace=True)
 
     # Clean
-    df = df[df["target_chembl_id"].isin(cfg.params.targets)]
-    df = df[cfg.params.cols].set_index("smiles")
+    df = df[df["target_chembl_id"].isin(targets)]
+    df = df[cols].set_index("smiles")
     df.dropna(subset=["document_year"], inplace=True)
     df["document_year"] = df["document_year"].astype(
         "Int16"
@@ -50,20 +55,26 @@ def process_qsar_data(cfg: QSARDataConfig) -> pd.DataFrame:
 
     bin_features = pd.concat([comments, inhibition, relations], axis=0)
     bin_features = bin_features[~bin_features.index.isin(pchembl_val.index)]
-    bin_features["pchembl_value"] = cfg.params.px_placeholder
+    bin_features["pchembl_value"] = px_placeholder
     bin_features["pchembl_value"] = (
         bin_features["pchembl_value"].groupby(bin_features.index).first()
     )
 
-    df = pd.concat([pchembl_val, bin_features["pchembl_value"]], axis=0)
+    df_prime = pd.concat([pchembl_val, bin_features["pchembl_value"]], axis=0)
+    # target_col = [df.loc[i]["target_chembl_id"][0] for i in value_features.index]
+    # df_prime = pd.DataFrame(data={
+    #     "smiles": value_features.index,
+    #     "value": value_features.values,
+    #     "target": target_col
+    # })
 
-    return df
+    return df_prime
 
 
 def write_training_data(
     df: pd.DataFrame,
     out_path: str,
-    random_seed: int,
+    random_state: int,
 ) -> None:
     """Function that divides the training data based on chemical diversity, into the
     appropriate training data format and writes it to a file.
@@ -73,7 +84,7 @@ def write_training_data(
         out_path: Filepath to where the train data should be stored.
         random_seed: Number of random seed to ensure reproducibility of experiments.
     """
-    df = df.sample(frac=1, random_state=random_seed)
+    df = df.sample(frac=1, random_state=random_state)
     mols = [
         Chem.MolFromSmiles(mol)
         for mol in tqdm(df["smiles"], desc="Converting SMILES to Mol objects")
@@ -85,18 +96,29 @@ def write_training_data(
     joblib.dump(train_data, filename=out_path)
 
 
-@hydra.main(config_path="../config", config_name="config")
-def main(cfg: QSARDataConfig):
-    df = process_qsar_data(cfg=cfg)
-    if cfg.params.classification:
-        df = (df > cfg.params.px_thresh).astype("f4")
+@hydra.main(version_base=None, config_path="../config", config_name="config")
+def main(cfg: DictConfig):
+    abs_raw_path = abspath(cfg.qsar_dataset.raw.path)
+    targets = cfg.qsar_dataset.targets
+    cols = cfg.qsar_dataset.cols
+    px_placeholder = cfg.qsar_dataset.px_placeholder
+
+    df = transform(
+        raw_path=abs_raw_path,
+        targets=targets,
+        cols=cols,
+        px_placeholder=px_placeholder,
+    )
+
+    if cfg.qsar_dataset.classification:
+        df = (df > cfg.qsar_dataset.px_thresh).astype("f4")
 
     df.to_csv(cfg.processed.path)
 
     write_training_data(
         df=pd.read_csv(cfg.processed.path),
-        out_path=cfg.files.train_data,
-        random_seed=cfg.params.random_seed,
+        out_path=cfg.final.train_data,
+        random_state=cfg.random_state,
     )
 
 
