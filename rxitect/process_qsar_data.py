@@ -1,124 +1,102 @@
-from typing import List
+import logging
+from typing import List, Optional
 
 import hydra
-import joblib
 import pandas as pd
 from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
-from rdkit import Chem
-from tqdm import tqdm
+from pyparsing import col
 
-from rxitect.chem.utils import calc_fp
-from rxitect.data.utils import LigandTrainingData
+from rxitect.data.utils import QSARDataset
+
+logger = logging.getLogger(__name__)
 
 
-def transform(
-    raw_path: str,
-    targets: List[str],
-    cols: List[str],
-    px_placeholder: float,
-) -> pd.DataFrame:
-    """Function that loads and processed ChEMBL data for specific ligands
-    to be used for training QSAR models.
-
+def construct_qsar_dataset(raw_data_path: str, targets: List[str], cols: List[str],
+                           px_placeholder: float = 3.99, temporal_split_year: int = 2015,
+                           negative_samples: bool = True, out_data_path: Optional[str] = None,) -> QSARDataset:
+    """Method that constructs a dataset from ChEMBL data to train QSAR regression models on,
+    using a temporal split to create a hold-out test dataset for evaluation.
+    
     Args:
-        cfg: A dictionary used to configure the parameters and filepaths
-                              used for the processing of the ChEMBL data into usable features
-                              for an eventual QSAR model.
-
+        raw_data_path: filepath of the raw data
+        targets: ChEMBL IDs that are relevant for the dataset creation
+        cols: relevant columns for current dataset creation
+        px_placeholder: pChEMBL value to use for negative examples
+        temporal_split_year: year at which the temporal split should happen to create the held-out test set
+        negative_samples: boolean flag that determines if negative samples should be included, default is True
+        out_data_path (optional): filepath where the processed data should be saved to, default is None
+        
     Returns:
-        A DataFrame that contains structured information with SMILES and their respective
-        features that will be used in the training of a QSAR model.
+        A QSARDataset object - a convenient abstraction.
     """
-    # Load
-    df = pd.read_csv(raw_path, sep="\t")
+    # Load and standardize raw data
+    df = pd.read_csv(raw_data_path, sep='\t')
     df.columns = df.columns.str.lower()
-    df.dropna(subset=["smiles"], inplace=True)
+    df.dropna(subset=['smiles'], inplace=True)
+    
+    # Filter data to only contain relevant targets
+    df = df[df['target_chembl_id'].isin(targets)]
+    
+    # Create temporal split for hold-out test set creation downstream
+    s_year = df.groupby("smiles")["document_year"].min().dropna()
+    s_year = s_year.astype("Int16")
+    idx_test = s_year[s_year > 2015].index
+    
+    # Re-index data to divide SMILES per target
+    df = df[cols].set_index(['target_chembl_id', 'smiles'])
+    
+    # Process positive examples from data, taking the mean of duplicates and removing missing entries
+    pos_samples = df['pchembl_value'].groupby(['target_chembl_id', 'smiles']).mean().dropna()
+    
+    df_processed = pos_samples
+    if negative_samples:
+        # Process negative examples from data, setting their default pChEMBL values to some threshold (default 3.99)
+        # Looks for where inhibition or no activity are implied
+        comments = df[(df['comment'].str.contains('Not Active') == True)]
+        inhibitions = df[(df['standard_type'] == 'Inhibition') & df['standard_relation'].isin(['<', '<='])]
+        relations = df[df['standard_type'].isin(['EC50', 'IC50', 'Kd', 'Ki']) & df['standard_relation'].isin(['>', '>='])]
+        neg_samples = pd.concat([comments, inhibitions, relations])
+        # Ensure only true negative samples remain in the negative sample set
+        neg_samples = neg_samples[~neg_samples.index.isin(pos_samples.index)]
+        neg_samples['pchembl_value'] = px_placeholder
+        neg_samples = neg_samples['pchembl_value'].groupby(['target_chembl_id', 'smiles']).first()  # Regroup indices
+        df_processed = pd.concat([pos_samples, neg_samples])
+        
+    df_processed = df_processed.unstack('target_chembl_id')
+    idx_test = list(set(df_processed.index).intersection(idx_test))
+    
+    qsar_dataset = QSARDataset(dataset=df_processed,
+                               idx_test_temporal_split=idx_test,
+                               params_used={
+                                   "targets": targets,
+                                   "px_placeholder": px_placeholder,
+                                   "temporal_split_year": temporal_split_year,
+                                   "negative_samples": negative_samples,
+                               })
 
-    # Clean
-    df = df[df["target_chembl_id"].isin(targets)]
-    df = df[cols].set_index("smiles")
-    df.dropna(subset=["document_year"], inplace=True)
-    df["document_year"] = df["document_year"].astype(
-        "Int16"
-    )  # Nullable integer type
+    if out_data_path:
+        df_processed.to_csv(out_data_path, index=True)
 
-    # Transform
-    pchembl_val = df["pchembl_value"].groupby("smiles").mean().dropna()
-    comments = df.query(expr="comment.str.contains('Not Active', na=False)")
-    inhibition = df.query(
-        expr="standard_type == 'Inhibition' & standard_relation.isin(['<', '<='])"
-    )
-    relations = df.query(
-        expr="standard_type.isin(['EC50', 'IC50', 'Kd', 'Ki']) & standard_relation.isin(['>', '>='])"
-    )
-
-    bin_features = pd.concat([comments, inhibition, relations], axis=0)
-    bin_features = bin_features[~bin_features.index.isin(pchembl_val.index)]
-    bin_features["pchembl_value"] = px_placeholder
-    bin_features["pchembl_value"] = (
-        bin_features["pchembl_value"].groupby(bin_features.index).first()
-    )
-
-    df_prime = pd.concat([pchembl_val, bin_features["pchembl_value"]], axis=0)
-    # target_col = [df.loc[i]["target_chembl_id"][0] for i in value_features.index]
-    # df_prime = pd.DataFrame(data={
-    #     "smiles": value_features.index,
-    #     "value": value_features.values,
-    #     "target": target_col
-    # })
-
-    return df_prime
-
-
-def write_training_data(
-    df: pd.DataFrame,
-    out_path: str,
-    random_state: int,
-) -> None:
-    """Function that divides the training data based on chemical diversity, into the
-    appropriate training data format and writes it to a file.
-
-    Args:
-        df: A DataFrame containing the cleaned ChEMBL data prepared for QSAR model training.
-        out_path: Filepath to where the train data should be stored.
-        random_seed: Number of random seed to ensure reproducibility of experiments.
-    """
-    df = df.sample(frac=1, random_state=random_state)
-    mols = [
-        Chem.MolFromSmiles(mol)
-        for mol in tqdm(df["smiles"], desc="Converting SMILES to Mol objects")
-    ]
-    X = calc_fp(mols=mols)
-    y = df["pchembl_value"]
-
-    train_data = LigandTrainingData(X=X, y=y)
-    joblib.dump(train_data, filename=out_path)
+    return qsar_dataset
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
 def main(cfg: DictConfig):
     abs_raw_path = abspath(cfg.qsar_dataset.raw.path)
+    abs_proc_path = abspath(cfg.qsar_dataset.processed.path)
     targets = cfg.qsar_dataset.targets
     cols = cfg.qsar_dataset.cols
     px_placeholder = cfg.qsar_dataset.px_placeholder
 
-    df = transform(
-        raw_path=abs_raw_path,
+    df = construct_qsar_dataset(
+        raw_data_path=abs_raw_path,
         targets=targets,
         cols=cols,
         px_placeholder=px_placeholder,
-    )
-
-    if cfg.qsar_dataset.classification:
-        df = (df > cfg.qsar_dataset.px_thresh).astype("f4")
-
-    df.to_csv(cfg.processed.path)
-
-    write_training_data(
-        df=pd.read_csv(cfg.processed.path),
-        out_path=cfg.final.train_data,
-        random_state=cfg.random_state,
+        temporal_split_year=2015, #  TODO: Add to config
+        negative_samples=True,  # TODO: Add to config,
+        out_data_path=abs_proc_path
     )
 
 

@@ -1,8 +1,9 @@
 import selfies as sf
 from rdkit import Chem
+from rxitect.chem.utils import calc_fp
 
 from rxitect.utils.exceptions import RxMolException
-from rxitect.utils.types import Fingerprints, Optional, RDKitMol
+from rxitect.utils.types import Fingerprint, Optional, RDKitMol
 
 
 class RxMol:
@@ -39,7 +40,7 @@ class RxMol:
             self.rdkit_mol = Chem.MolFromSmiles(smiles, sanitize=False)
 
         self._selfies: Optional[str] = None
-        self._fingerprints: Fingerprints = {}
+        self._fingerprint: Fingerprint = {}
         self._is_sanitized: bool = False
 
         if sanitize:
@@ -56,6 +57,14 @@ class RxMol:
             self._selfies = sf.encoder(self.smiles)
         return self._selfies
 
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """TODO
+        """
+        if not self._fingerprint:
+            fp_array = calc_fp(mols=[self.rdkit_mol])
+            self._fingerprint = {i: val for i, val in enumerate(fp_array[0])}
+        return self._fingerprint
 
 def rxmol_from_selfies(selfies: str) -> RxMol:
     """Creates an RxMol object from a SELFIES string.

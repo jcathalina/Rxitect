@@ -18,7 +18,6 @@ from rxitect.data.utils import LigandTrainingData
 class QSARModel(str, Enum):
     XGB = "xgboost"
     RF = "random_forest"
-    SVM = "svm"
 
 
 @hydra.main(config_path="../config", config_name="config", version_base=None)
@@ -36,7 +35,7 @@ def main(cfg: DictConfig) -> None:
     print(f"Model params: {cfg.qsar_model.params}")
     print(
         f"Save the output to {output_path}"
-    )  # TODO: specify if reg/clf in filename?
+    )
 
     dataset = joblib.load(dataset_path)
     X, y = dataset.X, dataset.y.values
@@ -49,8 +48,6 @@ def main(cfg: DictConfig) -> None:
         model = xgb.XGBRegressor(**cfg.qsar_model.params)
     elif cfg.qsar_model.name == QSARModel.RF:
         model = RandomForestRegressor(**cfg.qsar_model.params)
-    elif cfg.qsar_model.name == QSARModel.SVM:
-        model = SVR(**cfg.qsar_model.params)
     else:
         raise Exception(
             f"Chosen model '{cfg.qsar_model.name}' does not exist."

@@ -1,5 +1,7 @@
-name: svm
+name: svr
 classification: false
 params:
   kernel: rbf
-  
+
+benchmark:
+  dir: benchmarks/svr/
