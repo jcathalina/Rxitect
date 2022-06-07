@@ -5,7 +5,9 @@ from datetime import datetime
 
 import os
 import logging
+from typing import List, Union
 import hydra
+import joblib
 import numpy as np
 from tqdm import tqdm
 import xgboost as xgb
@@ -16,12 +18,12 @@ from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
 from sklearn import preprocessing
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import GridSearchCV, KFold, train_test_split
+from sklearn.model_selection import GridSearchCV, KFold, cross_validate, train_test_split
 from rdkit import Chem
 
 from rxitect.chem.utils import calc_fp
-from rxitect.data.utils import QSARModel
-from rxitect.process_qsar_data import transform
+from rxitect.data.utils import QSARDataset, QSARModel
+from rxitect.process_qsar_data import construct_qsar_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +63,28 @@ def cross_validate_svr(dataset: pd.DataFrame, n_splits: int, random_state: int, 
     logger.info("*+.Done.+*")
 
 
+def kfold_cv_benchmark(model: Union[RandomForestRegressor, xgb.XGBRegressor],
+                        dataset: QSARDataset,
+                        k: int,
+                        out_dir: str,
+                        target: str,
+                        scoring: List[str] = ['r2', 'neg_root_mean_squared_error'],
+                        n_jobs: int = -1) -> None:
+    """
+    """
+    X_train = dataset.X_train(target)
+    X_test = dataset.X_test(target)
+    y_train = dataset.y_train(target)
+    y_test = dataset.y_test(target)
+
+    model.fit(X=X_train, y=y_train, sample_weight=[1 if px_val >= 4 else 0.1 for px_val in y_train])
+    cv_result = cross_validate(model, X_train, y_train, cv=k, scoring=scoring,
+                               return_train_score=True, return_estimator=True, n_jobs=n_jobs)
+
+    joblib.dump(cv_result, filename=f"{out_dir}/cv_{k}_fold_results_{target}_{date_label()}.pkl")
+
+
+
 def safe_mkdir(dir_path: str) -> None:
     """A helper function that allows you to cleanly create a directory if
     it does not exist yet.
@@ -96,29 +120,28 @@ def main(cfg: DictConfig) -> None:
     random_state = cfg.random_state
     benchmark_dir = abspath(cfg.qsar_model.benchmark.dir)
 
-    safe_mkdir(benchmark_dir)   
+    safe_mkdir(benchmark_dir)
+
+    dataset = construct_qsar_dataset(raw_data_path=raw_path,
+                                    targets=targets,
+                                    cols=cols,
+                                    px_placeholder=px_placeholder,
+                                    temporal_split_year=2015, #  TODO: Add to config
+                                    negative_samples=True,  # TODO: Add to config,
+                                    out_data_path=None)
 
     for target in targets:
-        df = transform(raw_path, [target], cols, px_placeholder)
-        df = df.sample(frac=1, random_state=random_state)
-        # mols = [
-        #     Chem.MolFromSmiles(mol)
-        #     for mol in tqdm(df.index, desc="Converting SMILES to Mol objects")
-        # ]
-
-        # X = calc_fp(mols=mols)
-        # y = df.values
-
         if cfg.qsar_model.name == QSARModel.XGB:
-            pass
+            model = xgb.XGBRegressor(**cfg.qsar_model.params)
         elif cfg.qsar_model.name == QSARModel.RF:
-            pass
-        elif cfg.qsar_model.name == QSARModel.SVR:
-            cross_validate_svr(df, n_splits=3, random_state=random_state, out_dir=benchmark_dir, target=target)
+            model = RandomForestRegressor(n_estimators=1_000, max_features="sqrt")
         else:
             raise Exception(
                 f"Chosen model '{cfg.qsar_model.name}' does not exist."
             )
+        if model:
+            kfold_cv_benchmark(model, dataset=dataset, k=5, out_dir=benchmark_dir,
+                                    target=target)
 
 
 if __name__ == "__main__":
