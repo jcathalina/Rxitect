@@ -84,7 +84,6 @@ def kfold_cv_benchmark(model: Union[RandomForestRegressor, xgb.XGBRegressor],
     joblib.dump(cv_result, filename=f"{out_dir}/cv_{k}_fold_results_{target}_{date_label()}.pkl")
 
 
-
 def safe_mkdir(dir_path: str) -> None:
     """A helper function that allows you to cleanly create a directory if
     it does not exist yet.

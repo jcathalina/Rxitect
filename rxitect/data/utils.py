@@ -1,6 +1,7 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -8,17 +9,15 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from rxitect.chem.utils import calc_fp
-from rxitect.utils.types import ArrayDict, StrDict
+from rxitect.utils.types import ArrayDict
 
 
 @dataclass
 class QSARDataset:
     """Class representing the dataset used to train QSAR models"""
-    dataset: pd.DataFrame
-    idx_test_temporal_split: pd.Index
-    params_used: StrDict
-    df_test: pd.DataFrame = field(init=False)
-    df_train: pd.DataFrame = field(init=False)
+    df_test: pd.DataFrame
+    df_train: pd.DataFrame
+    targets: List[str]
     _X_train: ArrayDict = field(init=False)
     _X_test: ArrayDict = field(init=False)
     _y_train: ArrayDict = field(init=False)
@@ -26,13 +25,19 @@ class QSARDataset:
     
     def __post_init__(self) -> None:
         """Initializes the train and test data based on a temporal split in the data to be used for QSAR model fitting."""
-        self.df_test = self.dataset.loc[self.idx_test_temporal_split]
-        self.df_train = self.dataset.drop(self.df_test.index)
-        self._X_train = {k: np.array([]) for k in self.params_used["targets"]}
-        self._X_test = {k: np.array([]) for k in self.params_used["targets"]}
-        self._y_train = {k: np.array([]) for k in self.params_used["targets"]}
-        self._y_test = {k: np.array([]) for k in self.params_used["targets"]}
-        
+        self._X_train = {k: np.array([]) for k in self.targets}
+        self._X_test = {k: np.array([]) for k in self.targets}
+        self._y_train = {k: np.array([]) for k in self.targets}
+        self._y_test = {k: np.array([]) for k in self.targets}
+
+    def get_train_test_data(self, target_chembl_id: str) -> Tuple[np.ndarray, ...]:
+        """
+        """
+        return (self.X_train(target_chembl_id),
+                self.y_train(target_chembl_id),
+                self.X_test(target_chembl_id),
+                self.y_test(target_chembl_id))
+
     def X_train(self, target_chembl_id: str) -> np.ndarray:
         """Lazily evaluates the train data points for a given target ChEMBL ID
         
@@ -44,7 +49,7 @@ class QSARDataset:
         """
         if not self._X_train[target_chembl_id].size:
             data = self.df_train[target_chembl_id].dropna().index
-            self._X_train[target_chembl_id] = calc_fp(data)
+            self._X_train[target_chembl_id] = calc_fp(data, accept_smiles=True)
         return self._X_train[target_chembl_id]
     
     def X_test(self, target_chembl_id: str) -> np.ndarray:
@@ -58,7 +63,7 @@ class QSARDataset:
         """
         if not self._X_test[target_chembl_id].size:
             data = self.df_test[target_chembl_id].dropna().index
-            self._X_test[target_chembl_id] = calc_fp(data)
+            self._X_test[target_chembl_id] = calc_fp(data, accept_smiles=True)
         return self._X_test[target_chembl_id]
     
     def y_train(self, target_chembl_id: str) -> np.ndarray:
@@ -88,6 +93,16 @@ class QSARDataset:
             data = self.df_test[target_chembl_id].dropna().values
             self._y_test[target_chembl_id] = data
         return self._y_test[target_chembl_id]
+
+    @classmethod
+    def load_from_file(cls, train_file: str, test_file: str) -> QSARDataset:
+        """
+        """
+        df_train = pd.read_csv(train_file)
+        df_test = pd.read_csv(test_file)
+        targets = [target for target in df_train.columns[1:].values]  # TODO: Assert that targets are equal for train and test
+
+        return QSARDataset(df_train, df_test, targets)
 
 
 class QSARModel(str, Enum):

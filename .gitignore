@@ -33,3 +33,5 @@ models/selfies_lstm_epoch=21-step=65823.ckpt
 /outputs
 */Untitled*.ipynb
 models/*
+benchmarks/*
+!benchmarks/.gitkeep

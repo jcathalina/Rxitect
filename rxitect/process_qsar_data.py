@@ -1,11 +1,11 @@
 import logging
+import os
 from typing import List, Optional
 
 import hydra
 import pandas as pd
 from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
-from pyparsing import col
 
 from rxitect.data.utils import QSARDataset
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def construct_qsar_dataset(raw_data_path: str, targets: List[str], cols: List[str],
                            px_placeholder: float = 3.99, temporal_split_year: int = 2015,
-                           negative_samples: bool = True, out_data_path: Optional[str] = None,) -> QSARDataset:
+                           negative_samples: bool = True, out_dir: Optional[str] = None) -> QSARDataset:
     """Method that constructs a dataset from ChEMBL data to train QSAR regression models on,
     using a temporal split to create a hold-out test dataset for evaluation.
     
@@ -66,17 +66,16 @@ def construct_qsar_dataset(raw_data_path: str, targets: List[str], cols: List[st
     df_processed = df_processed.unstack('target_chembl_id')
     idx_test = list(set(df_processed.index).intersection(idx_test))
     
-    qsar_dataset = QSARDataset(dataset=df_processed,
-                               idx_test_temporal_split=idx_test,
-                               params_used={
-                                   "targets": targets,
-                                   "px_placeholder": px_placeholder,
-                                   "temporal_split_year": temporal_split_year,
-                                   "negative_samples": negative_samples,
-                               })
+    df_test = df_processed.loc[idx_test]
+    df_train = df_processed.drop(df_test.index)
 
-    if out_data_path:
-        df_processed.to_csv(out_data_path, index=True)
+    qsar_dataset = QSARDataset(df_train=df_train.reset_index(drop=False),
+                               df_test=df_test.reset_index(drop=False),
+                               targets=targets)
+
+    if out_dir:
+        df_test.to_csv(os.path.join(out_dir, f"ligand_test_splityear={temporal_split_year}.csv"), index=True)
+        df_train.to_csv(os.path.join(out_dir, f"ligand_train_splityear={temporal_split_year}.csv"), index=True)
 
     return qsar_dataset
 
@@ -84,19 +83,19 @@ def construct_qsar_dataset(raw_data_path: str, targets: List[str], cols: List[st
 @hydra.main(version_base=None, config_path="../config", config_name="config")
 def main(cfg: DictConfig):
     abs_raw_path = abspath(cfg.qsar_dataset.raw.path)
-    abs_proc_path = abspath(cfg.qsar_dataset.processed.path)
+    abs_proc_dir = abspath(cfg.qsar_dataset.processed.dir)
     targets = cfg.qsar_dataset.targets
     cols = cfg.qsar_dataset.cols
     px_placeholder = cfg.qsar_dataset.px_placeholder
 
-    df = construct_qsar_dataset(
+    ds = construct_qsar_dataset(
         raw_data_path=abs_raw_path,
         targets=targets,
         cols=cols,
         px_placeholder=px_placeholder,
         temporal_split_year=2015, #  TODO: Add to config
         negative_samples=True,  # TODO: Add to config,
-        out_data_path=abs_proc_path
+        out_dir=abs_proc_dir
     )
 
 

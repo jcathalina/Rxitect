@@ -14,7 +14,7 @@ sys.path.append(os.path.join(RDConfig.RDContribDir, "SA_Score"))
 import sascorer  # type: ignore
 
 
-class Property(Enum):
+class Property(str, Enum):
     MolecularWeight = "MW"
     LogP = "logP"
     HBA = "HBA"
@@ -77,8 +77,5 @@ def calc_prop(mols: List[RDKitMol], prop: str) -> np.ndarray:
     """
     scores = np.zeros(len(mols))
     for i, mol in enumerate(mols):
-        try:
-            scores[i] = prop_dict.get(prop)(mol)
-        except Exception as e:  # NOTE: Can be handled.
-            continue
+        scores[i] = prop_dict.get(prop)(mol)
     return scores

@@ -18,7 +18,8 @@ raw:
   path: data/raw/ligand_raw.tsv
 
 processed:
-  path: data/processed/ligand_proc.csv
+  dir: data/processed/
+  path: ${processed.dir}/ligand_proc.csv
 
 final:
   path: data/final/ligand_train_data.pkl
