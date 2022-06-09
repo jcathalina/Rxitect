@@ -33,9 +33,7 @@ def calc_fp(mols: Union[List[RDKitMol], List[str]], radius: int = 3, bit_len: in
 
 def _calc_ecfp(mols: List[RDKitMol], radius: int = 3, bit_len: int = 2048) -> ArrayLike:
     fps = np.zeros((len(mols), bit_len))
-    for i, mol in enumerate(
-        tqdm(mols, desc="Calculating Extended-Connectivity Fingerprints")
-    ):
+    for i, mol in enumerate(mols):
         fp = AllChem.GetMorganFingerprintAsBitVect(
             mol, radius=radius, nBits=bit_len
         )
@@ -67,9 +65,7 @@ def _calc_physchem(mols: List[RDKitMol]) -> ArrayLike:
     ]
     assert len(prop_list) == N_PHYSCHEM_PROPS, f"Invalid number of properties: {len(prop_list)}, should be {N_PHYSCHEM_PROPS}"
     fps = np.zeros((len(mols), N_PHYSCHEM_PROPS))
-    for i, prop in enumerate(
-        tqdm(prop_list, desc="Calculating physico-chemical properties")
-    ):
+    for i, prop in enumerate(prop_list):
         fps[:, i] = calc_prop(mols=mols, prop=prop.value)
     return fps
 
@@ -83,7 +79,6 @@ def smiles_to_rdkit_mol(smiles_list: List[str]) -> List[RDKitMol]:
     Returns:
         A list of RDKit Mol objects created from the given SMILES
     """
-    rdkit_mols = [Chem.MolFromSmiles(smi)
-            for smi in tqdm(smiles_list, desc="Converting SMILES to Mol objects")]
+    rdkit_mols = [Chem.MolFromSmiles(smi) for smi in smiles_list]
     
     return rdkit_mols

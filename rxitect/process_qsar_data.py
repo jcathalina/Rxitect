@@ -6,6 +6,7 @@ import hydra
 import pandas as pd
 from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
+from sklearn.model_selection import train_test_split
 
 from rxitect.data.utils import QSARDataset
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def construct_qsar_dataset(raw_data_path: str, targets: List[str], cols: List[str],
-                           px_placeholder: float = 3.99, temporal_split_year: int = 2015,
+                           px_placeholder: float = 3.99, random_state: int = 42,
                            negative_samples: bool = True, out_dir: Optional[str] = None) -> QSARDataset:
     """Method that constructs a dataset from ChEMBL data to train QSAR regression models on,
     using a temporal split to create a hold-out test dataset for evaluation.
@@ -40,8 +41,7 @@ def construct_qsar_dataset(raw_data_path: str, targets: List[str], cols: List[st
     
     # Create temporal split for hold-out test set creation downstream
     s_year = df.groupby("smiles")["document_year"].min().dropna()
-    s_year = s_year.astype("Int16")
-    idx_test = s_year[s_year > 2015].index
+    s_year = s_year.astype("Int16") # TODO: Add temporal split back I guess.
     
     # Re-index data to divide SMILES per target
     df = df[cols].set_index(['target_chembl_id', 'smiles'])
@@ -64,18 +64,15 @@ def construct_qsar_dataset(raw_data_path: str, targets: List[str], cols: List[st
         df_processed = pd.concat([pos_samples, neg_samples])
         
     df_processed = df_processed.unstack('target_chembl_id')
-    idx_test = list(set(df_processed.index).intersection(idx_test))
     
-    df_test = df_processed.loc[idx_test]
-    df_train = df_processed.drop(df_test.index)
-
+    df_train, df_test = train_test_split(df_processed, test_size=0.2,random_state=random_state)
     qsar_dataset = QSARDataset(df_train=df_train.reset_index(drop=False),
                                df_test=df_test.reset_index(drop=False),
                                targets=targets)
 
     if out_dir:
-        df_test.to_csv(os.path.join(out_dir, f"ligand_test_splityear={temporal_split_year}.csv"), index=True)
-        df_train.to_csv(os.path.join(out_dir, f"ligand_train_splityear={temporal_split_year}.csv"), index=True)
+        df_test.to_csv(os.path.join(out_dir, f"ligand_test_seed={random_state}.csv"), index=True)
+        df_train.to_csv(os.path.join(out_dir, f"ligand_train_seed={random_state}.csv"), index=True)
 
     return qsar_dataset
 

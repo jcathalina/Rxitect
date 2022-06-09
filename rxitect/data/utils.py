@@ -15,8 +15,8 @@ from rxitect.utils.types import ArrayDict
 @dataclass
 class QSARDataset:
     """Class representing the dataset used to train QSAR models"""
-    df_test: pd.DataFrame
     df_train: pd.DataFrame
+    df_test: pd.DataFrame
     targets: List[str]
     _X_train: ArrayDict = field(init=False)
     _X_test: ArrayDict = field(init=False)
@@ -48,7 +48,7 @@ class QSARDataset:
             An array containing the fingerprints of all train data points for the given target ChEMBL ID
         """
         if not self._X_train[target_chembl_id].size:
-            data = self.df_train[target_chembl_id].dropna().index
+            data = self.df_train.dropna(subset=[target_chembl_id])['smiles']
             self._X_train[target_chembl_id] = calc_fp(data, accept_smiles=True)
         return self._X_train[target_chembl_id]
     
@@ -62,7 +62,7 @@ class QSARDataset:
             An array containing the fingerprints of all test data points for the given target ChEMBL ID
         """
         if not self._X_test[target_chembl_id].size:
-            data = self.df_test[target_chembl_id].dropna().index
+            data = self.df_test.dropna(subset=[target_chembl_id])['smiles']
             self._X_test[target_chembl_id] = calc_fp(data, accept_smiles=True)
         return self._X_test[target_chembl_id]
     
@@ -93,6 +93,14 @@ class QSARDataset:
             data = self.df_test[target_chembl_id].dropna().values
             self._y_test[target_chembl_id] = data
         return self._y_test[target_chembl_id]
+
+    def get_classifier_labels(self, target_chembl_id: str) -> Tuple[ArrayLike, ArrayLike]:
+        """
+        """
+        y_train_clf = np.where(self.y_train(target_chembl_id) > 6.5, 1, 0)  # TODO: Make 6.5 thresh a const
+        y_test_clf = np.where(self.y_test(target_chembl_id) > 6.5, 1, 0)
+        
+        return y_train_clf, y_test_clf
 
     @classmethod
     def load_from_file(cls, train_file: str, test_file: str) -> QSARDataset:

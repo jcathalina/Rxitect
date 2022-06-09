@@ -10,7 +10,7 @@ from rdkit import Chem
 
 from rxitect.chem.utils import calc_single_fp, smiles_to_rdkit_mol
 
-def smiles_to_fingerprint(smiles: str) -> ArrayLike:
+def smiles_to_fingerprint(smiles: str) -> np.ndarray:
     """
     Helper function that transforms SMILES strings into
     the enhanced 2067D-Fingerprint representation used for training in Rxitect.
@@ -20,15 +20,8 @@ def smiles_to_fingerprint(smiles: str) -> ArrayLike:
     Args:
         smiles: A list of SMILES representations of molecules.
     """
-    fingerprint = np.array([])
-    try:
-        rdkit_mol = Chem.MolFromSmiles(smiles[0])
-        fingerprint = calc_single_fp(rdkit_mol)
-    except TypeError:
-        fingerprint = smiles_to_rdkit_mol(smiles_list=smiles)
-
-    if not fingerprint.size:
-        raise Exception
+    fingerprint: np.ndarray = calc_single_fp(smiles, accept_smiles=True)
+    fingerprint = torch.from_numpy(fingerprint.astype(np.float32))
     return fingerprint
 
 class PyTorchQSARDataset(Dataset):
@@ -41,8 +34,7 @@ class PyTorchQSARDataset(Dataset):
 
     def __getitem__(self, index) -> Tuple[ArrayLike, float]:
         smiles = self.pchembl_values.iloc[index, 0]
-        print(smiles)
-        pchembl_value = self.pchembl_values.iloc[index, 1]
+        pchembl_value = self.pchembl_values.iloc[index, 1].astype(np.float32)
         if self.transform:
             smiles = self.transform(smiles)
         return smiles, pchembl_value

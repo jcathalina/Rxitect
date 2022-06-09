@@ -121,13 +121,7 @@ def main(cfg: DictConfig) -> None:
 
     safe_mkdir(benchmark_dir)
 
-    dataset = construct_qsar_dataset(raw_data_path=raw_path,
-                                    targets=targets,
-                                    cols=cols,
-                                    px_placeholder=px_placeholder,
-                                    temporal_split_year=2015, #  TODO: Add to config
-                                    negative_samples=True,  # TODO: Add to config,
-                                    out_data_path=None)
+    dataset = QSARDataset.load_from_file()
 
     for target in targets:
         if cfg.qsar_model.name == QSARModel.XGB:
