@@ -2,7 +2,6 @@ from enum import Enum
 
 import hydra
 import joblib
-from sklearn.svm import SVR
 import xgboost as xgb
 from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
@@ -10,9 +9,9 @@ from sklearn import preprocessing
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
+from sklearn.svm import SVR
 
 import wandb
-from rxitect.data.utils import LigandTrainingData
 
 
 class QSARModel(str, Enum):
@@ -33,9 +32,7 @@ def main(cfg: DictConfig) -> None:
     print(f"Train modeling using {dataset_path}")
     print(f"Model used: {cfg.qsar_model.name}")
     print(f"Model params: {cfg.qsar_model.params}")
-    print(
-        f"Save the output to {output_path}"
-    )
+    print(f"Save the output to {output_path}")
 
     dataset = joblib.load(dataset_path)
     X, y = dataset.X, dataset.y.values

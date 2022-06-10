@@ -8,18 +8,18 @@ cols: [
         "standard_relation",
         "document_year",
       ]
-classification: false
 px_placeholder: 3.99
 px_thresh: 6.5
-train_size: 0.2
-val_size: 0.1
+test_size: 0.2
 
 raw:
-  path: data/raw/ligand_raw.tsv
+  dir: data/raw
+  path: ${raw.dir}/ligand_raw.tsv
 
 processed:
-  dir: data/processed/
+  dir: data/processed
   path: ${processed.dir}/ligand_proc.csv
 
 final:
-  path: data/final/ligand_train_data.pkl
+  dir: data/final
+  path: ${final.dir}/ligand_train_data.pkl

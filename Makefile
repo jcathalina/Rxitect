@@ -30,11 +30,11 @@ test:
 
 docs_view:
 	@echo View API documentation... 
-	pdoc src --http localhost:8080
+	pdoc rxitect --http localhost:8080
 
 docs_save:
 	@echo Save documentation to docs... 
-	pdoc src -o docs
+	pdoc rxitect -o docs
 
 ## Delete all compiled Python files
 clean:

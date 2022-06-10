@@ -1,7 +1,7 @@
 import selfies as sf
 from rdkit import Chem
-from rxitect.chem.utils import calc_fp
 
+from rxitect.chem.utils import calc_single_fp
 from rxitect.utils.exceptions import RxMolException
 from rxitect.utils.types import Fingerprint, Optional, RDKitMol
 
@@ -59,14 +59,19 @@ class RxMol:
 
     @property
     def fingerprint(self) -> Fingerprint:
-        """TODO
+        """The 2067 dimensional fingerprint representing a molecule created from
+        the ECFP + 19 Physicochemical Properties, created by lazy evaluation.
+        
+        Returns:
+            the Fingerprint representation of the molecule.
         """
         if not self._fingerprint:
-            fp_array = calc_fp(mols=[self.rdkit_mol])
-            self._fingerprint = {i: val for i, val in enumerate(fp_array[0])}
+            fp_array = calc_single_fp(mol=self.rdkit_mol, accept_smiles=False)
+            self._fingerprint = fp_array
         return self._fingerprint
 
-def rxmol_from_selfies(selfies: str) -> RxMol:
+
+def rx_mol_from_selfies(selfies: str) -> RxMol:
     """Creates an RxMol object from a SELFIES string.
 
     Args:

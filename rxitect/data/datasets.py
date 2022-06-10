@@ -1,14 +1,15 @@
+from typing import Callable, List, Tuple
+
+import numpy as np
 import pandas as pd
 import torch
-import numpy as np
-
-from typing import Callable, List, Tuple
-from torch.utils.data import Dataset, DataLoader, random_split
 from hydra.utils import to_absolute_path as abspath
 from numpy.typing import ArrayLike
 from rdkit import Chem
+from torch.utils.data import DataLoader, Dataset, random_split
 
 from rxitect.chem.utils import calc_single_fp, smiles_to_rdkit_mol
+
 
 def smiles_to_fingerprint(smiles: str) -> np.ndarray:
     """
@@ -24,9 +25,19 @@ def smiles_to_fingerprint(smiles: str) -> np.ndarray:
     fingerprint = torch.from_numpy(fingerprint.astype(np.float32))
     return fingerprint
 
+
 class PyTorchQSARDataset(Dataset):
-    def __init__(self, ligand_file: str, target_chembl_id: str, transform: Callable = None) -> None:
-        self.pchembl_values: pd.DataFrame = pd.read_csv(ligand_file, usecols=["smiles", target_chembl_id]).dropna().reset_index(drop=True)
+    def __init__(
+        self,
+        ligand_file: str,
+        target_chembl_id: str,
+        transform: Callable = None,
+    ) -> None:
+        self.pchembl_values: pd.DataFrame = (
+            pd.read_csv(ligand_file, usecols=["smiles", target_chembl_id])
+            .dropna()
+            .reset_index(drop=True)
+        )
         self.transform: Callable = transform
 
     def __len__(self) -> int:
@@ -41,13 +52,17 @@ class PyTorchQSARDataset(Dataset):
 
 
 if __name__ == "__main__":
-    test_data = PyTorchQSARDataset(ligand_file=abspath("data/processed/ligand_test_splityear=2015.csv"),
-                                            target_chembl_id="CHEMBL226",
-                                            transform=smiles_to_fingerprint)
+    test_data = PyTorchQSARDataset(
+        ligand_file=abspath("data/processed/ligand_test_splityear=2015.csv"),
+        target_chembl_id="CHEMBL226",
+        transform=smiles_to_fingerprint,
+    )
 
-    train_data = PyTorchQSARDataset(ligand_file=abspath("data/processed/ligand_train_splityear=2015.csv"),
-                                            target_chembl_id="CHEMBL226",
-                                            transform=smiles_to_fingerprint)
-    
+    train_data = PyTorchQSARDataset(
+        ligand_file=abspath("data/processed/ligand_train_splityear=2015.csv"),
+        target_chembl_id="CHEMBL226",
+        transform=smiles_to_fingerprint,
+    )
+
     X_train, y_train = train_data[:]
     print(X_train.shape)
