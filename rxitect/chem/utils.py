@@ -1,13 +1,9 @@
-import logging
-from termios import N_SLIP
 from typing import Union
 
 import numpy as np
-import rdkit.Chem
 from numpy.typing import ArrayLike
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
-from tqdm import tqdm
 
 from rxitect.structs.property import Property, calc_prop
 from rxitect.utils.types import List, RDKitMol
