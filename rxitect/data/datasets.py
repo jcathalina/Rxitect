@@ -1,68 +1,102 @@
-from typing import Callable, List, Tuple
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import torch
 from hydra.utils import to_absolute_path as abspath
 from numpy.typing import ArrayLike
-from rdkit import Chem
-from torch.utils.data import DataLoader, Dataset, random_split
 
-from rxitect.chem.utils import calc_single_fp, smiles_to_rdkit_mol
-
-
-def smiles_to_fingerprint(smiles: str) -> np.ndarray:
-    """
-    Helper function that transforms SMILES strings into
-    the enhanced 2067D-Fingerprint representation used for training in Rxitect.
-    If only a single SMILES was passed, will return a single array containing
-    its fingerprint.
-
-    Args:
-        smiles: A list of SMILES representations of molecules.
-    """
-    fingerprint: np.ndarray = calc_single_fp(smiles, accept_smiles=True)
-    fingerprint = torch.from_numpy(fingerprint.astype(np.float32))
-    return fingerprint
+from rxitect.chem.utils import calc_fp
+from rxitect.utils.types import ArrayDict
 
 
-class PyTorchQSARDataset(Dataset):
-    def __init__(
-        self,
-        ligand_file: str,
-        target_chembl_id: str,
-        transform: Callable = None,
-    ) -> None:
-        self.pchembl_values: pd.DataFrame = (
-            pd.read_csv(ligand_file, usecols=["smiles", target_chembl_id])
-            .dropna()
-            .reset_index(drop=True)
+@dataclass
+class SingleTargetQSARDataset:
+    """Class representing the dataset used to train QSAR models for single ChEMBL targets"""
+
+    df_train: pd.DataFrame
+    df_test: pd.DataFrame
+    target: str
+    _X_train: np.ndarray = np.array([])
+    _X_test: np.ndarray = np.array([])
+    _y_train: np.ndarray = np.array([])
+    _y_test: np.ndarray = np.array([])
+
+    def get_train_test_data(self) -> Tuple[np.ndarray, ...]:
+        """
+        """
+        return (
+            self.X_train,
+            self.y_train,
+            self.X_test,
+            self.y_test,
         )
-        self.transform: Callable = transform
 
-    def __len__(self) -> int:
-        return len(self.pchembl_values)
+    @property
+    def X_train(self) -> np.ndarray:
+        """Lazily evaluates the train data points for a given target ChEMBL ID
 
-    def __getitem__(self, index) -> Tuple[ArrayLike, float]:
-        smiles = self.pchembl_values.iloc[index, 0]
-        pchembl_value = self.pchembl_values.iloc[index, 1].astype(np.float32)
-        if self.transform:
-            smiles = self.transform(smiles)
-        return smiles, pchembl_value
+        Returns:
+            An array containing the fingerprints of all train data points for the given target ChEMBL ID
+        """
+        if not self._X_train.size:
+            data = self.df_train["smiles"]
+            self._X_train = calc_fp(data, accept_smiles=True)
+        return self._X_train
 
+    @property
+    def X_test(self) -> np.ndarray:
+        """Lazily evaluates the test data points for a given target ChEMBL ID
 
-if __name__ == "__main__":
-    test_data = PyTorchQSARDataset(
-        ligand_file=abspath("data/processed/ligand_test_splityear=2015.csv"),
-        target_chembl_id="CHEMBL226",
-        transform=smiles_to_fingerprint,
-    )
+        Returns:
+            An array containing the fingerprints of all test data points for the given target ChEMBL ID
+        """
+        if not self._X_test.size:
+            data = self.df_test["smiles"]
+            self._X_test = calc_fp(data, accept_smiles=True)
+        return self._X_test
 
-    train_data = PyTorchQSARDataset(
-        ligand_file=abspath("data/processed/ligand_train_splityear=2015.csv"),
-        target_chembl_id="CHEMBL226",
-        transform=smiles_to_fingerprint,
-    )
+    @property
+    def y_train(self) -> np.ndarray:
+        """Lazily evaluates the train labels for a given target ChEMBL ID
 
-    X_train, y_train = train_data[:]
-    print(X_train.shape)
+        Returns:
+            An array containing the pChEMBL value of all train data points for the given target ChEMBL ID
+        """
+        if not self._y_train.size:
+            data = self.df_train["pchembl_value"]
+            self._y_train = data
+        return self._y_train
+    
+    @property
+    def y_test(self) -> np.ndarray:
+        """Lazily evaluates the test labels for a given target ChEMBL ID
+
+        Returns:
+            An array containing the pChEMBL value of all test data points for the given target ChEMBL ID
+        """
+        if not self._y_test.size:
+            data = self.df_test["pchembl_value"]
+            self._y_test = data
+        return self._y_test
+
+    def get_classifier_labels(
+        self, target_chembl_id: str
+    ) -> Tuple[ArrayLike, ArrayLike]:
+        """ """
+        y_train_clf = np.where(
+            self.y_train > 6.5, 1, 0
+        )  # TODO: Make 6.5 thresh a const
+        y_test_clf = np.where(self.y_test(target_chembl_id) > 6.5, 1, 0)
+
+        return y_train_clf, y_test_clf
+
+    @classmethod
+    def load_from_file(cls, train_file: str, test_file: str, target: Optional[str] = None) -> SingleTargetQSARDataset:
+        """ """
+        df_train = pd.read_csv(train_file)
+        df_test = pd.read_csv(test_file)
+        target = target if target else f"Loaded from files: TRAIN='{df_train}' --- TEST='{df_test}'"
+
+        return SingleTargetQSARDataset(df_train, df_test, target)
