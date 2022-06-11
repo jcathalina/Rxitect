@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -24,8 +25,7 @@ class SingleTargetQSARDataset:
     _y_test: np.ndarray = np.array([])
 
     def get_train_test_data(self) -> Tuple[np.ndarray, ...]:
-        """
-        """
+        """ """
         return (
             self.X_train,
             self.y_train,
@@ -68,7 +68,7 @@ class SingleTargetQSARDataset:
             data = self.df_train["pchembl_value"]
             self._y_train = data
         return self._y_train
-    
+
     @property
     def y_test(self) -> np.ndarray:
         """Lazily evaluates the test labels for a given target ChEMBL ID
@@ -93,10 +93,16 @@ class SingleTargetQSARDataset:
         return y_train_clf, y_test_clf
 
     @classmethod
-    def load_from_file(cls, train_file: str, test_file: str, target: Optional[str] = None) -> SingleTargetQSARDataset:
+    def load_from_file(
+        cls, train_file: str, test_file: str, target: Optional[str] = None
+    ) -> SingleTargetQSARDataset:
         """ """
         df_train = pd.read_csv(train_file)
         df_test = pd.read_csv(test_file)
-        target = target if target else f"Loaded from files: TRAIN='{df_train}' --- TEST='{df_test}'"
+        target = (
+            target
+            if target
+            else f"Loaded from files: TRAIN='{df_train}' --- TEST='{df_test}'"
+        )
 
         return SingleTargetQSARDataset(df_train, df_test, target)

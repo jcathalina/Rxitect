@@ -43,7 +43,7 @@ def construct_qsar_dataset(
 
     # Filter data to only contain relevant targets
     df = df[df["target_chembl_id"] == target]
-    
+
     # Re-index data to divide SMILES per target
     df = df[cols].set_index("smiles")
 
@@ -52,12 +52,7 @@ def construct_qsar_dataset(
     tsplit_test_idx = year[year > 2015].index
 
     # Process positive examples from data, taking the mean of duplicates and removing missing entries
-    pos_samples = (
-        df["pchembl_value"]
-        .groupby("smiles")
-        .mean()
-        .dropna()
-    )
+    pos_samples = df["pchembl_value"].groupby("smiles").mean().dropna()
 
     df_processed = pos_samples
     if negative_samples:
@@ -77,14 +72,12 @@ def construct_qsar_dataset(
         neg_samples = neg_samples[~neg_samples.index.isin(pos_samples.index)]
         neg_samples["pchembl_value"] = px_placeholder
         neg_samples = (
-            neg_samples["pchembl_value"]
-            .groupby(neg_samples.index)
-            .first()
+            neg_samples["pchembl_value"].groupby(neg_samples.index).first()
         )  # Regroup indices
         df_processed = pd.concat([pos_samples, neg_samples])
 
     df_processed = df_processed.sample(frac=1.0, random_state=random_state)
-    
+
     if tsplit_year:
         idx_test = list(set(df_processed.index).intersection(tsplit_test_idx))
         df_test = df_processed.loc[idx_test].dropna()
@@ -104,10 +97,12 @@ def construct_qsar_dataset(
 
     if out_dir:
         df_test.to_csv(
-            os.path.join(out_dir, f"ligand_{target}_test_{file_suffix}"), index=True
+            os.path.join(out_dir, f"ligand_{target}_test_{file_suffix}"),
+            index=True,
         )
         df_train.to_csv(
-            os.path.join(out_dir, f"ligand_{target}_train_{file_suffix}"), index=True
+            os.path.join(out_dir, f"ligand_{target}_train_{file_suffix}"),
+            index=True,
         )
 
     return qsar_dataset

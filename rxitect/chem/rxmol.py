@@ -61,7 +61,7 @@ class RxMol:
     def fingerprint(self) -> Fingerprint:
         """The 2067 dimensional fingerprint representing a molecule created from
         the ECFP + 19 Physicochemical Properties, created by lazy evaluation.
-        
+
         Returns:
             the Fingerprint representation of the molecule.
         """

@@ -1,4 +1,3 @@
-
 from typing import Tuple
 
 from numpy.typing import ArrayLike
