@@ -35,3 +35,4 @@ models/selfies_lstm_epoch=21-step=65823.ckpt
 models/*
 benchmarks/*
 !benchmarks/.gitkeep
+/dask-worker-space

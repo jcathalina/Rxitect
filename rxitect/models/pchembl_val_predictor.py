@@ -33,7 +33,8 @@ class LSTMEncoder(pl.LightningModule):
         self.input_size = input_dim
         self.n_directions = 1
         self.encoder_dim = encoder_dim
-        
+        self.n_layers = num_layers
+
         self.rnn = nn.LSTM(input_size=input_dim,
                            hidden_size=encoder_dim,
                            num_layers=num_layers,
@@ -42,8 +43,8 @@ class LSTMEncoder(pl.LightningModule):
         
     def forward(self, inp, previous_hidden=None, pack=True):
         input_tensor = inp[0]
-        input_length = inp[1]
-        print(f"INP LSTM: {inp}")
+        input_length = inp[1].reshape(-1)
+        # print(f"INP LSTM: {inp}")
         # print(f"INP TENSOR: {inp[0]}")
         # print(f"INP LEN: {inp[1]}")
         batch_size = input_tensor.size(0)
@@ -51,6 +52,7 @@ class LSTMEncoder(pl.LightningModule):
         if pack:
             input_lengths_sorted, perm_idx = torch.sort(input_length, dim=0, descending=True)
             input_lengths_sorted = input_lengths_sorted.detach().to(device="cpu").tolist()
+            # print(f"INP LEN SORTED: {input_lengths_sorted}")
             input_tensor = torch.index_select(input_tensor, 0, perm_idx)
             rnn_input = pack_padded_sequence(input=input_tensor,
                                              lengths=input_lengths_sorted,
@@ -106,8 +108,10 @@ class Embedding(pl.LightningModule):
 
     def forward(self, inp):
         inp = inp.type(torch.long)
-        # print(f"INPUT: {inp}")
+        # print(f"PRE-EMB INPUT: {inp}")
         embedded = self.embedding(inp)
+        # print(f"POST-EMB INPUT: {inp}")
+
         return embedded
 
 
@@ -116,15 +120,19 @@ class PChEMBLValueRegressor(pl.LightningModule):
         super(PChEMBLValueRegressor, self).__init__()
         self.tokens = tokens
         self.lr = lr
+        self.criterion = nn.MSELoss()
         self.embedding = Embedding(embedding_dim=128, n_embeddings=len(self.tokens), padding_idx=tokens.index(' '))
         self.encoder = LSTMEncoder(input_dim=128, encoder_dim=128, num_layers=2, dropout=0.8)
         self.mlp = MLP(input_dim=128, hidden_dim=128, output_dim=1)
 
-    def forward(self, inp, eval=False):
-        if eval:
-            self.eval()
-        else:
-            self.train()
+    def forward(self, inp):
+        # print(f"PREDICTOR INPUT: {inp}")
+        # print(f"PREDICTOR INPUT idx0: {inp[0]}")
+        # print(f"PREDICTOR INPUTidx1: {inp[1]}")
+        # if eval:
+        #     self.eval()
+        # else:
+        #     self.train()
         input_tensor = inp[0]
         input_length = inp[1]
         embedded = self.embedding(input_tensor)
@@ -134,31 +142,6 @@ class PChEMBLValueRegressor(pl.LightningModule):
         output = self.mlp(output)
         return output
 
-
-    # @staticmethod
-    # def cast_inputs(sample, task, use_cuda, for_prediction=False):
-    #     batch_mols = sample['tokenized_smiles'].to(dtype=torch.long)
-    #     if for_prediction and "object" in sample.keys():
-    #         batch_object = sample['object']
-    #     else:
-    #         batch_object = None
-    #     batch_length = sample['length'].to(dtype=torch.long)
-    #     if not for_prediction and "labels" in sample.keys():
-    #         batch_labels = sample['labels'].to(dtype=torch.float)
-    #         if task == 'classification':
-    #             batch_labels = batch_labels.to(dtype=torch.long)
-    #     else:
-    #         batch_labels = None
-    #     if use_cuda:
-    #         batch_mols = batch_mols.to(device="cuda")
-    #         batch_length = batch_length.to(device="cuda")
-    #         if batch_labels is not None:
-    #             batch_labels = batch_labels.to(device="cuda")
-    #     if batch_object is not None:
-    #         return (batch_mols, batch_length), batch_object
-    #     else:
-    #         return (batch_mols, batch_length), batch_labels
-
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.lr)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.98)
@@ -166,9 +149,10 @@ class PChEMBLValueRegressor(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         # print(f"BATCH: {batch}")
-        x, y = batch['tokenized_smiles'], batch['labels']
-        y_pred = self(x)
-        loss = nn.MSELoss(y_pred, y)
+        x, y = [batch['tokenized_smiles'], batch['length']], batch['labels']
+        y_pred = self(x).squeeze()
+        # print(f"Y PRED: {y_pred}")
+        loss = self.criterion(y_pred, y)
         return loss
 
 
