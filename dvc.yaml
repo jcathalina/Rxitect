@@ -1,0 +1,9 @@
+stages:
+  preprocess_qsar_data:
+    cmd: python src/rxitect/process_qsar_data.py
+    deps:
+    - data/raw/qsar_data.csv
+    outs:
+    - data/processed/CHEMBL226_dataset.pq
+    - data/processed/CHEMBL240_dataset.pq
+    - data/processed/CHEMBL251_dataset.pq

@@ -1,0 +1,18 @@
+schema: '2.0'
+stages:
+  preprocess_qsar_data:
+    cmd: python src/rxitect/process_qsar_data.py
+    deps:
+    - path: data/raw/qsar_data.csv
+      md5: 51e44eec7c92859a52db98f457b9520b
+      size: 30639140
+    outs:
+    - path: data/processed/CHEMBL226_dataset.pq
+      md5: 08a9855177068143db4abc1258867aa2
+      size: 479196
+    - path: data/processed/CHEMBL240_dataset.pq
+      md5: 9a2be162f264f6f5506e451de72e763c
+      size: 948269
+    - path: data/processed/CHEMBL251_dataset.pq
+      md5: d119eef6fb8eab6b6200fa889c37a18a
+      size: 466063

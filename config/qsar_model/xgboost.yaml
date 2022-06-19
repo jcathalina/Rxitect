@@ -1,10 +1,8 @@
 name: xgboost
-classification: false
+regression: true
 params:
-  n_estimators: 1000
-  learning_rate: 0.1
+  n_estimators: 500
+  learning_rate: 0.3
   tree_method: "gpu_hist"
   gpu_id: 0
   eval_metric: "mae"
-benchmark:
-  dir: benchmarks/xgboost/

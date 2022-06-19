@@ -4,40 +4,49 @@
 
 SHELL=/bin/bash
 CONDA_ACTIVATE=source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
+CONDA_DEACTIVATE=source $$(conda info --base)/etc/profile.d/conda.sh ; conda deactivate ; conda deactivate
+DEV_ENV_NAME=rxt-dev
+
 
 install: 
-	@echo "Installing..."
-	conda create -f environment.yaml
-	git rm -r --cached 'data/raw'
-	git rm -r --cached 'data/processed'
-	git rm -r --cached 'data/final'
-	git rm -r --cached 'models'
+	@echo "Creating development environment for Rxitect..."
+	mamba env create -f env-dev.yaml
+	@echo "Installing Rxitect in editable mode..."
+	$(CONDA_ACTIVATE) $(DEV_ENV_NAME)
+	pip install -e .
 
-activate:
-	@echo "Activating virtual environment"
-	$(CONDA_ACTIVATE) rxt
+env:
+	@echo "Activating Rxitect's development environment..."
+	$(CONDA_ACTIVATE) $(DEV_ENV_NAME)
 
-initialize_git:
-	git init 
+delete_env:
+	@echo "Deleting the current environment..."
+	$(CONDA_DEACTIVATE) deactivate
+	mamba env remove -n $(DEV_ENV_NAME)
 
-pull_data:
+reinstall_env:
+	@echo "Reinstalling Rxitect environment..."
+	delete_env
+	install
+
+data:
+	@echo "Pulling data from DVC..."
 	dvc pull -r origin
-
-setup: initialize_git install
 
 test:
 	pytest
 
-docs_view:
-	@echo View API documentation... 
-	pdoc rxitect --http localhost:8080
+view_docs:
+	@echo Loading API documentation... 
+	pdoc src --http localhost:8080
 
-docs_save:
-	@echo Save documentation to docs... 
-	pdoc rxitect -o docs
+save_docs:
+	@echo Saving documentation...
+	rm -rf docs
+	pdoc src -o docs
 
-## Delete all compiled Python files
 clean:
+	@echo "Deleting all compiled Python files..."
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 	rm -rf .pytest_cache

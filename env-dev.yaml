@@ -1,9 +1,37 @@
 name: rxt-dev
 channels:
+  - pytorch
   - conda-forge
   - defaults
 dependencies:
-  - python=3.8
-  - graphviz>=2.38,<3.0
-  - rdkit=>2019.09.1
-  - poetry>=1.1.4,<2.0
+  - python=3.10
+  - rdkit
+  - cudatoolkit=11.3
+  - pytorch=1.11
+  - pytorch-lightning
+  - poetry
+  - conda-lock
+  - dask
+  - pandas
+  - numpy
+  - scikit-learn
+  - py-xgboost
+  - seaborn
+  - matplotlib
+  - notebook
+  - hydra-core
+  - dvc
+  - selfies
+  - fastparquet
+
+  # dev dependencies
+  - jupyterlab
+  - black
+  - isort
+  - mypy
+  - pre-commit
+  - pytest
+
+  # pip-only dependencies
+  - pip:
+    - pdoc3==0.10.0
