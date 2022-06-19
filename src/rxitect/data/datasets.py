@@ -12,97 +12,86 @@ from rxitect.chem.utils import calc_fp
 from rxitect.utils.types import ArrayDict
 
 
-@dataclass
-class SingleTargetQSARDataset:
-    """Class representing the dataset used to train QSAR models for single ChEMBL targets"""
+from torch.utils.data import Dataset, DataLoader
+from typing import Optional, List
+import dask.dataframe as dd
+import selfies as sf
+import torch
+import pytorch_lightning as pl
 
-    df_train: pd.DataFrame
-    df_test: pd.DataFrame
-    target: str
-    _X_train: np.ndarray = np.array([])
-    _X_test: np.ndarray = np.array([])
-    _y_train: np.ndarray = np.array([])
-    _y_test: np.ndarray = np.array([])
 
-    def get_train_test_data(self) -> Tuple[np.ndarray, ...]:
-        """ """
-        return (
-            self.X_train,
-            self.y_train,
-            self.X_test,
-            self.y_test,
-        )
+class SelfiesQsarDataset(Dataset):
+    def __init__(self, train=True):
+        super().__init__()
 
-    @property
-    def X_train(self) -> np.ndarray:
-        """Lazily evaluates the train data points for a given target ChEMBL ID
+        # df = dd.read_parquet(f"../data/processed/{target}_dataset.pq")
+        if train:
+            df = dd.read_csv("../data/processed/ligand_CHEMBL240_train_seed=42.csv", dtype={'smiles': str, 'pchembl_value': 'float32'}).compute()
+        else:
+            df = dd.read_csv("../data/processed/ligand_CHEMBL240_test_seed=42.csv", dtype={'smiles': str, 'pchembl_value': 'float32'}).compute()
+            
+        df['selfies'] = [sf.encoder(smi) for smi in df['smiles']]
+        
+        vocab = sf.get_alphabet_from_selfies(df['selfies'])
+        stoi = {x:i for i, x in enumerate(vocab, start=2)}
+        stoi['[nop]'] = 0
+        stoi['.'] = 1
+        
+        enc = [sf.selfies_to_encoding(selfies=selfies, vocab_stoi=stoi, pad_to_len=128, enc_type='label') for selfies in df['selfies']]
+        df['enc_selfies'] = enc
+        df = df[df['enc_selfies'].apply(len) <= 128]
+        
+        self.inp = [sf.selfies_to_encoding(selfies=selfies, vocab_stoi=stoi, pad_to_len=128, enc_type='label') for selfies in df['selfies']]
+        self.length = np.array([np.count_nonzero(enc_selfies) for enc_selfies in self.inp])
+        self.target = df['pchembl_value'].values
+        
+        self.inp = torch.tensor(self.inp, dtype=torch.float32)
+        self.length = torch.from_numpy(self.length)
+        self.target = torch.from_numpy(self.target)
 
-        Returns:
-            An array containing the fingerprints of all train data points for the given target ChEMBL ID
-        """
-        if not self._X_train.size:
-            data = self.df_train["smiles"]
-            self._X_train = calc_fp(data, accept_smiles=True)
-        return self._X_train
+    def __len__(self):
+        return len(self.inp)
+    
+    def __getitem__(self, index):
+        sample = {}
+        sample['tokenized_smiles'] = (self.inp[index])
+        sample['length'] = (self.length[index])
+        sample['labels'] = (self.target[index])
+        return sample
 
-    @property
-    def X_test(self) -> np.ndarray:
-        """Lazily evaluates the test data points for a given target ChEMBL ID
 
-        Returns:
-            An array containing the fingerprints of all test data points for the given target ChEMBL ID
-        """
-        if not self._X_test.size:
-            data = self.df_test["smiles"]
-            self._X_test = calc_fp(data, accept_smiles=True)
-        return self._X_test
+class SelfiesQsarDataModule(pl.LightningDataModule):
+    def __init__(self, batch_size: int = 128, max_selfies_len: int = 128):
+        super().__init__()
+        self.batch_size = batch_size
+        self.max_selfies_len = max_selfies_len
+        
+    def setup(self, stage: Optional[str] = None):
+        if stage in (None, 'fit'):
+            self.qsar_train = SelfiesQsarDataset(train=True)
+        if stage in (None, "test", "predict"):
+            self.qsar_test = SelfiesQsarDataset(train=False)
+    
+    def train_dataloader(self):
+        return DataLoader(self.qsar_train,
+                          batch_size=self.batch_size,
+                          shuffle=True,
+                          num_workers=4,
+                          pin_memory=True,
+                          sampler=None)
 
-    @property
-    def y_train(self) -> np.ndarray:
-        """Lazily evaluates the train labels for a given target ChEMBL ID
-
-        Returns:
-            An array containing the pChEMBL value of all train data points for the given target ChEMBL ID
-        """
-        if not self._y_train.size:
-            data = self.df_train["pchembl_value"]
-            self._y_train = data
-        return self._y_train
-
-    @property
-    def y_test(self) -> np.ndarray:
-        """Lazily evaluates the test labels for a given target ChEMBL ID
-
-        Returns:
-            An array containing the pChEMBL value of all test data points for the given target ChEMBL ID
-        """
-        if not self._y_test.size:
-            data = self.df_test["pchembl_value"]
-            self._y_test = data
-        return self._y_test
-
-    def get_classifier_labels(
-        self, target_chembl_id: str
-    ) -> Tuple[ArrayLike, ArrayLike]:
-        """ """
-        y_train_clf = np.where(
-            self.y_train > 6.5, 1, 0
-        )  # TODO: Make 6.5 thresh a const
-        y_test_clf = np.where(self.y_test(target_chembl_id) > 6.5, 1, 0)
-
-        return y_train_clf, y_test_clf
-
-    @classmethod
-    def load_from_file(
-        cls, train_file: str, test_file: str, target: Optional[str] = None
-    ) -> SingleTargetQSARDataset:
-        """ """
-        df_train = pd.read_csv(train_file)
-        df_test = pd.read_csv(test_file)
-        target = (
-            target
-            if target
-            else f"Loaded from files: TRAIN='{df_train}' --- TEST='{df_test}'"
-        )
-
-        return SingleTargetQSARDataset(df_train, df_test, target)
+    def test_dataloader(self):
+        return DataLoader(self.qsar_test,
+                          batch_size=self.batch_size,
+                          shuffle=False,
+                          num_workers=4,
+                          pin_memory=True,
+                          sampler=None)
+    
+    def predict_dataloader(self):
+        return DataLoader(self.qsar_test,
+                          batch_size=self.batch_size,
+                          shuffle=False,
+                          num_workers=4,
+                          pin_memory=True,
+                          sampler=None)
