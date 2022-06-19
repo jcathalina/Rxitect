@@ -1,6 +1,7 @@
-from typing import Union
+from typing import Dict, Union
 
 import numpy as np
+import selfies as sf
 from numpy.typing import ArrayLike
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
@@ -28,7 +29,7 @@ def calc_fp(
     accept_smiles: bool = False,
 ) -> ArrayLike:
     if accept_smiles:
-        mols = smiles_to_rdkit_mol(smiles_list=mols)
+        mols = batch_mol_from_smiles(smiles_list=mols)
 
     ecfp = _calc_ecfp(mols, radius=radius, bit_len=bit_len)
     phch = _calc_physchem(mols)
@@ -36,14 +37,10 @@ def calc_fp(
     return fps
 
 
-def _calc_ecfp(
-    mols: List[RDKitMol], radius: int = 3, bit_len: int = 2048
-) -> ArrayLike:
+def _calc_ecfp(mols: List[RDKitMol], radius: int = 3, bit_len: int = 2048) -> ArrayLike:
     fps = np.zeros((len(mols), bit_len))
     for i, mol in enumerate(mols):
-        fp = AllChem.GetMorganFingerprintAsBitVect(
-            mol, radius=radius, nBits=bit_len
-        )
+        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=bit_len)
         DataStructs.ConvertToNumpyArray(fp, fps[i, :])
     return fps
 
@@ -79,7 +76,7 @@ def _calc_physchem(mols: List[RDKitMol]) -> ArrayLike:
     return fps
 
 
-def smiles_to_rdkit_mol(smiles_list: List[str]) -> List[RDKitMol]:
+def batch_mol_from_smiles(smiles_list: List[str]) -> List[RDKitMol]:
     """Helper function to convert a list of SMILES to RDKit Mol objects
 
     Args:
@@ -89,5 +86,36 @@ def smiles_to_rdkit_mol(smiles_list: List[str]) -> List[RDKitMol]:
         A list of RDKit Mol objects created from the given SMILES
     """
     rdkit_mols = [Chem.MolFromSmiles(smi) for smi in smiles_list]
-
     return rdkit_mols
+
+
+def mol_from_selfies(
+    selfies: str, sanitize: bool = True, replacements: Dict[str, str] = {}
+) -> RDKitMol:
+    smiles = sf.decoder(selfies)
+    rdkit_mol = Chem.MolFromSmiles(smiles, sanitize, replacements)
+    return rdkit_mol
+
+
+def mol_to_selfies(
+    mol: RDKitMol,
+    isomeric_smiles: bool = True,
+    kekule_smiles: bool = False,
+    rooted_at_atom: int = -1,
+    canonical: bool = True,
+    all_bonds_explicit: bool = False,
+    all_Hs_explicit: bool = False,
+    do_random: bool = False,
+) -> str:
+    smiles = Chem.MolToSmiles(
+        mol,
+        isomeric_smiles,
+        kekule_smiles,
+        rooted_at_atom,
+        canonical,
+        all_bonds_explicit,
+        all_Hs_explicit,
+        do_random,
+    )
+    selfies = sf.encoder(smiles)
+    return selfies

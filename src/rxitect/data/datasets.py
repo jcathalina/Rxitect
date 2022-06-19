@@ -8,7 +8,8 @@ import pandas as pd
 from hydra.utils import to_absolute_path as abspath
 from numpy.typing import ArrayLike
 
-from rxitect.chem.utils import calc_fp
+from rxitect.chem.utils import calc_fp, mol_from_selfies
+from rxitect.data.vectorizer import SelfiesVectorizer
 from rxitect.utils.types import ArrayDict
 
 
@@ -21,30 +22,30 @@ import pytorch_lightning as pl
 
 
 class SelfiesQsarDataset(Dataset):
-    def __init__(self, train=True):
+    def __init__(self, smiles: List[str], pchembl_values: List[float], vectorizer: SelfiesVectorizer, pad_to_len: int = 128):
         super().__init__()
+        self.smiles = smiles
+        self.selfies = [sf.encoder(smi) for smi in self.smiles]
+        self.target = pchembl_values
+        self.vectorizer = vectorizer
+        
+        self.vectorizer.pad = pad_to_len
+        self.vectorizer.fit(selfies_list=self.selfies)
+        # self.vocab = sf.get_alphabet_from_selfies(self.selfies)
+        # stoi = {x:i for i, x in enumerate(vocab, start=2)}
+        # stoi['[nop]'] = 0
+        # stoi['.'] = 1
+        
+        # enc = [sf.selfies_to_encoding(selfies=selfies, vocab_stoi=stoi, pad_to_len=128, enc_type='label') for selfies in df['selfies']]
+        # df['enc_selfies'] = enc
+        # df = df[df['enc_selfies'].apply(len) <= 128]
+        
+        # self.inp = [sf.selfies_to_encoding(selfies=selfies, vocab_stoi=stoi, pad_to_len=128, enc_type='label') for selfies in df['selfies']]
+        self.inp = [vectorizer.transform(s) for  s in self.selfies]
+        # self.length = np.array([np.count_nonzero(enc_selfies) for enc_selfies in self.inp])
+        # self.target = df['pchembl_value'].values
+        
 
-        # df = dd.read_parquet(f"../data/processed/{target}_dataset.pq")
-        if train:
-            df = dd.read_csv("../data/processed/ligand_CHEMBL240_train_seed=42.csv", dtype={'smiles': str, 'pchembl_value': 'float32'}).compute()
-        else:
-            df = dd.read_csv("../data/processed/ligand_CHEMBL240_test_seed=42.csv", dtype={'smiles': str, 'pchembl_value': 'float32'}).compute()
-            
-        df['selfies'] = [sf.encoder(smi) for smi in df['smiles']]
-        
-        vocab = sf.get_alphabet_from_selfies(df['selfies'])
-        stoi = {x:i for i, x in enumerate(vocab, start=2)}
-        stoi['[nop]'] = 0
-        stoi['.'] = 1
-        
-        enc = [sf.selfies_to_encoding(selfies=selfies, vocab_stoi=stoi, pad_to_len=128, enc_type='label') for selfies in df['selfies']]
-        df['enc_selfies'] = enc
-        df = df[df['enc_selfies'].apply(len) <= 128]
-        
-        self.inp = [sf.selfies_to_encoding(selfies=selfies, vocab_stoi=stoi, pad_to_len=128, enc_type='label') for selfies in df['selfies']]
-        self.length = np.array([np.count_nonzero(enc_selfies) for enc_selfies in self.inp])
-        self.target = df['pchembl_value'].values
-        
         self.inp = torch.tensor(self.inp, dtype=torch.float32)
         self.length = torch.from_numpy(self.length)
         self.target = torch.from_numpy(self.target)
