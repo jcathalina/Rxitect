@@ -1,4 +1,5 @@
 from typing import Tuple
+import numpy as np
 
 from numpy.typing import ArrayLike
 from sklearn.model_selection import train_test_split
@@ -38,3 +39,11 @@ def train_test_val_split(
     )
 
     return X_train, X_test, X_val, y_train, y_test, y_val
+
+
+def one_hot_len_without_padding(one_hot: np.ndarray, padding_idx: int = 0) -> int:
+    count = 0
+    for row in range(len(one_hot)):
+        if one_hot[row][padding_idx] == 0:
+            count += 1
+    return count

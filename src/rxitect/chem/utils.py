@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Iterable
 
 import numpy as np
 import selfies as sf
@@ -6,74 +6,88 @@ from numpy.typing import ArrayLike
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 
-from rxitect.structs.property import Property, calc_prop
+from rxitect.structs.property import Property, batch_calc_prop, calc_prop
 from rxitect.utils.types import List, RDKitMol
 
 N_PHYSCHEM_PROPS = 19
-
-
-def calc_single_fp(
-    mol: Union[RDKitMol, str],
-    radius: int = 3,
-    bit_len: int = 2048,
-    accept_smiles: bool = True,
-) -> ArrayLike:
-    fp = calc_fp([mol], radius, bit_len, accept_smiles)[0]
-    return fp
+PROP_LIST = [
+    Property.MolecularWeight,
+    Property.LogP,
+    Property.HBA,
+    Property.HBD,
+    Property.RotatableBonds,
+    Property.AmideBonds,
+    Property.BridgeheadAtoms,
+    Property.HeteroAtoms,
+    Property.HeavyAtoms,
+    Property.SpiroAtoms,
+    Property.FCSP3,
+    Property.RingCount,
+    Property.AliphaticRings,
+    Property.AromaticRings,
+    Property.SaturatedRings,
+    Property.Heterocycles,
+    Property.TPSA,
+    Property.ValenceElectrons,
+    Property.CrippenMolMR,
+]
 
 
 def calc_fp(
-    mols: Union[List[RDKitMol], List[str]],
+    mol: RDKitMol,
     radius: int = 3,
     bit_len: int = 2048,
-    accept_smiles: bool = False,
-) -> ArrayLike:
-    if accept_smiles:
-        mols = batch_mol_from_smiles(smiles_list=mols)
-
-    ecfp = _calc_ecfp(mols, radius=radius, bit_len=bit_len)
-    phch = _calc_physchem(mols)
-    fps = np.concatenate([ecfp, phch], axis=1)
-    return fps
+) -> np.ndarray:
+    ecfp = calc_ecfp(mol, radius, bit_len)
+    phch = calc_physchem(mol)
+    fp = np.concatenate([ecfp, phch], axis=1)
+    return fp
 
 
-def _calc_ecfp(mols: List[RDKitMol], radius: int = 3, bit_len: int = 2048) -> ArrayLike:
-    fps = np.zeros((len(mols), bit_len))
-    for i, mol in enumerate(mols):
-        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=bit_len)
-        DataStructs.ConvertToNumpyArray(fp, fps[i, :])
-    return fps
+def calc_ecfp(mol: RDKitMol, radius: int = 3, bit_len: int = 2048) -> np.ndarray:
+    fp = np.zeros(shape=(1, bit_len))
+    _fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=bit_len)
+    DataStructs.ConvertToNumpyArray(_fp, fp)
+    return fp
 
 
-def _calc_physchem(mols: List[RDKitMol]) -> ArrayLike:
-    prop_list = [
-        Property.MolecularWeight,
-        Property.LogP,
-        Property.HBA,
-        Property.HBD,
-        Property.RotatableBonds,
-        Property.AmideBonds,
-        Property.BridgeheadAtoms,
-        Property.HeteroAtoms,
-        Property.HeavyAtoms,
-        Property.SpiroAtoms,
-        Property.FCSP3,
-        Property.RingCount,
-        Property.AliphaticRings,
-        Property.AromaticRings,
-        Property.SaturatedRings,
-        Property.Heterocycles,
-        Property.TPSA,
-        Property.ValenceElectrons,
-        Property.CrippenMolMR,
-    ]
+def calc_physchem(mol: RDKitMol, prop_list: List[str] = PROP_LIST):
     assert (
         len(prop_list) == N_PHYSCHEM_PROPS
     ), f"Invalid number of properties: {len(prop_list)}, should be {N_PHYSCHEM_PROPS}"
-    fps = np.zeros((len(mols), N_PHYSCHEM_PROPS))
+    fp = np.zeros(shape=(1, N_PHYSCHEM_PROPS))
     for i, prop in enumerate(prop_list):
-        fps[:, i] = calc_prop(mols=mols, prop=prop.value)
-    return fps
+        fp[i] = calc_prop(mol=mol, prop=prop.value)
+    return fp
+
+
+def batch_calc_fp(
+    mols: Iterable[RDKitMol],
+    radius: int = 3,
+    bit_len: int = 2048,
+) -> np.ndarray:
+    ecfp = batch_calc_ecfp(mols, radius, bit_len)
+    phch = batch_calc_physchem(mols)
+    fingerprints = np.concatenate([ecfp, phch], axis=1)
+    return fingerprints
+
+
+def batch_calc_ecfp(mols: Iterable[RDKitMol], radius: int = 3, bit_len: int = 2048) -> np.ndarray:
+    fingerprints = np.zeros((len(mols), bit_len))
+    for i, mol in enumerate(mols):
+        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=bit_len)
+        DataStructs.ConvertToNumpyArray(fp, fingerprints[i, :])
+    return fingerprints
+
+
+def batch_calc_physchem(mols: Iterable[RDKitMol], prop_list: List[str] = PROP_LIST) -> ArrayLike:
+    assert (
+        len(prop_list) == N_PHYSCHEM_PROPS
+    ), f"Invalid number of properties: {len(prop_list)}, should be {N_PHYSCHEM_PROPS}"
+    fingerprints = np.zeros((len(mols), N_PHYSCHEM_PROPS))
+    for i, prop in enumerate(prop_list):
+        fingerprints[:, i] = batch_calc_prop(mols=mols, prop=prop.value)
+    return fingerprints
 
 
 def batch_mol_from_smiles(smiles_list: List[str]) -> List[RDKitMol]:
@@ -107,6 +121,7 @@ def mol_to_selfies(
     all_Hs_explicit: bool = False,
     do_random: bool = False,
 ) -> str:
+    """Helper function that wraps around Chem.MolToSmiles adapted for SELFIES"""
     smiles = Chem.MolToSmiles(
         mol,
         isomeric_smiles,
@@ -119,3 +134,19 @@ def mol_to_selfies(
     )
     selfies = sf.encoder(smiles)
     return selfies
+
+
+def randomize_selfies(selfies: str, isomeric_smiles: bool = False) -> str:
+    """Perform a randomization of a SELFIES string
+    must be RDKit sanitizable"""
+    
+    mol = mol_from_selfies(selfies)
+    nmol = randomize_mol(mol)
+    selfies = mol_to_selfies(mol=nmol, canonical=False, isomeric_smiles=isomeric_smiles)
+    return selfies
+
+def randomize_mol(mol: RDKitMol) -> RDKitMol:
+    """Performs a randomization of the atom order of an RDKit molecule"""
+    ans = list(range(mol.GetNumAtoms()))
+    np.random.shuffle(ans)
+    return Chem.RenumberAtoms(mol, ans)

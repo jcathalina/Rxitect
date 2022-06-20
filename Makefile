@@ -31,6 +31,7 @@ reinstall_env:
 
 data:
 	@echo "Pulling data from DVC..."
+	$(CONDA_ACTIVATE) $(DEV_ENV_NAME)
 	dvc pull -r origin
 
 test:

@@ -65,7 +65,7 @@ prop_dict = {
 }
 
 
-def calc_prop(mols: List[RDKitMol], prop: str) -> np.ndarray:
+def batch_calc_prop(mols: List[RDKitMol], prop: str) -> np.ndarray:
     """Calculates the value of a molecular property for a batch of molecules.
 
     Args:
@@ -78,4 +78,19 @@ def calc_prop(mols: List[RDKitMol], prop: str) -> np.ndarray:
     scores = np.zeros(len(mols))
     for i, mol in enumerate(mols):
         scores[i] = prop_dict.get(prop)(mol)
+    return scores
+
+
+def calc_prop(mol: RDKitMol, prop: str) -> np.ndarray:
+    """Calculates the value of a molecular property for a batch of molecules.
+
+    Args:
+        mol: An RDKit Mol object.
+        prop: The dictionary key for the property to be calculated.
+
+    Returns:
+        an array of scores for the given molecule.
+    """
+    scores = np.zeros(shape=(1,))
+    scores = prop_dict.get(prop)(mol)
     return scores
