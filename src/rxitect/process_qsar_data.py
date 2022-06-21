@@ -19,7 +19,8 @@ def main(cfg: DictConfig):
 
     for target in targets:
         construct_qsar_dataset(
-            raw_data_path=os.path.join(abs_raw_path, "qsar_data.csv"),
+            raw_data_path=os.path.join(abs_raw_path, "qsar_data_xuhan.csv"),
+            sep="\t",
             target=target,
             usecols=usecols,
             dummy_pchembl_value=dummy_pchembl_value,

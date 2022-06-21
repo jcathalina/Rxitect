@@ -40,12 +40,12 @@ def calc_fp(
 ) -> np.ndarray:
     ecfp = calc_ecfp(mol, radius, bit_len)
     phch = calc_physchem(mol)
-    fp = np.concatenate([ecfp, phch], axis=1)
+    fp = np.concatenate([ecfp, phch])
     return fp
 
 
 def calc_ecfp(mol: RDKitMol, radius: int = 3, bit_len: int = 2048) -> np.ndarray:
-    fp = np.zeros(shape=(1, bit_len))
+    fp = np.zeros(shape=(bit_len))
     _fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=bit_len)
     DataStructs.ConvertToNumpyArray(_fp, fp)
     return fp
@@ -55,7 +55,7 @@ def calc_physchem(mol: RDKitMol, prop_list: List[str] = PROP_LIST):
     assert (
         len(prop_list) == N_PHYSCHEM_PROPS
     ), f"Invalid number of properties: {len(prop_list)}, should be {N_PHYSCHEM_PROPS}"
-    fp = np.zeros(shape=(1, N_PHYSCHEM_PROPS))
+    fp = np.zeros(shape=(N_PHYSCHEM_PROPS))
     for i, prop in enumerate(prop_list):
         fp[i] = calc_prop(mol=mol, prop=prop.value)
     return fp

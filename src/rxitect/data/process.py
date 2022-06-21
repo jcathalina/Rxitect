@@ -40,7 +40,7 @@ def construct_qsar_dataset(
 
     if out_dir:
         df.to_parquet(
-            os.path.join(out_dir, f"{target}_dataset.pq"),
+            os.path.join(out_dir, f"{target}_dataset_xuhan.pq"),
             index=True,
         )
 
