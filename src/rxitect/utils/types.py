@@ -11,5 +11,4 @@ from rdkit import Chem
 StrDict = Dict[str, Any]
 ArrayDict = Dict[str, ArrayLike]
 RDKitMol = Chem.rdchem.Mol
-Fingerprint = np.ndarray
 PathLike = Union[str, bytes, os.PathLike]
