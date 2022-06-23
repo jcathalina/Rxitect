@@ -4,7 +4,7 @@ import hydra
 from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
 
-from rxitect.data.process import construct_qsar_dataset
+from rxitect.qsar.corpus import construct_qsar_dataset
 
 logger = logging.getLogger(__name__)
 

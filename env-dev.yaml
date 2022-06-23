@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - python=3.10
+  - pip
   - rdkit
   - cudatoolkit=11.3
   - pytorch=1.11
@@ -19,10 +20,10 @@ dependencies:
   - seaborn
   - matplotlib
   - notebook
-  - hydra-core
   - dvc
   - selfies
   - fastparquet
+  - click
 
   # dev dependencies
   - jupyterlab
