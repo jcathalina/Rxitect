@@ -30,13 +30,14 @@ def construct_qsar_dataset(
     """
     # Load and standardize raw data
     df = pd.read_csv(filepath_or_buffer=raw_data_path, sep=sep, usecols=usecols)
-    df = (df.pipe(lowercase_cols)
-            .pipe(remove_na_smiles)
-            .pipe(filter_target, target=target)
-            .pipe(set_smiles_as_idx)
-            .pipe(preprocess_pchembl_values, dummy_pchembl_value=dummy_pchembl_value)
-            .pipe(reset_indices)
-        )
+    df = (
+        df.pipe(lowercase_cols)
+        .pipe(remove_na_smiles)
+        .pipe(filter_target, target=target)
+        .pipe(set_smiles_as_idx)
+        .pipe(preprocess_pchembl_values, dummy_pchembl_value=dummy_pchembl_value)
+        .pipe(reset_indices)
+    )
 
     if out_dir:
         df.to_parquet(
@@ -44,26 +45,36 @@ def construct_qsar_dataset(
             index=True,
         )
 
+
 def lowercase_cols(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = df.columns.str.lower()
     return df
+
 
 def remove_na_smiles(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["smiles"])
     return df
 
+
 def filter_target(df: pd.DataFrame, target: str) -> pd.DataFrame:
     df = df[df["target chembl id"] == target]
     return df
+
 
 def set_smiles_as_idx(df: pd.DataFrame) -> pd.DataFrame:
     df = df.set_index("smiles")
     return df
 
-def preprocess_pchembl_values(df: pd.DataFrame, dummy_pchembl_value: float = 3.99) -> pd.DataFrame:
+
+def preprocess_pchembl_values(
+    df: pd.DataFrame, dummy_pchembl_value: float = 3.99
+) -> pd.DataFrame:
     numery = df["pchembl value"].groupby("smiles").mean().dropna()
     comments = df[(df["comment"].str.contains("Not Active") == True)]
-    inhibits = df[(df["standard type"] == "Inhibition") & df["standard relation"].isin(["<", "<="])]
+    inhibits = df[
+        (df["standard type"] == "Inhibition")
+        & df["standard relation"].isin(["<", "<="])
+    ]
     relations = df[
         df["standard type"].isin(["EC50", "IC50", "Kd", "Ki"])
         & df["standard relation"].isin([">", ">="])
@@ -75,6 +86,7 @@ def preprocess_pchembl_values(df: pd.DataFrame, dummy_pchembl_value: float = 3.9
     new_values = pd.concat([numery, binary])
     df.update(new_values)
     return df
+
 
 def reset_indices(df: pd.DataFrame) -> pd.DataFrame:
     df = df.reset_index(drop=False)

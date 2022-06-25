@@ -2,6 +2,7 @@ from enum import Enum
 
 import hydra
 import joblib
+import wandb
 import xgboost as xgb
 from hydra.utils import to_absolute_path as abspath
 from omegaconf import DictConfig
@@ -10,8 +11,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
-
-import wandb
 
 
 class QSARModel(str, Enum):
@@ -46,9 +45,7 @@ def main(cfg: DictConfig) -> None:
     elif cfg.qsar_model.name == QSARModel.RF:
         model = RandomForestRegressor(**cfg.qsar_model.params)
     else:
-        raise Exception(
-            f"Chosen model '{cfg.qsar_model.name}' does not exist."
-        )
+        raise Exception(f"Chosen model '{cfg.qsar_model.name}' does not exist.")
 
     model.fit(
         X=X_train,

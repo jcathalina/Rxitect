@@ -1,8 +1,0 @@
-name: random_forest
-regression: true
-params:
-  n_estimators: 500
-  max_depth: 20
-  n_jobs: -1
-  oob_score: true
-  max_features: 0.33

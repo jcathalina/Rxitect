@@ -1,0 +1,18 @@
+# @package _global_
+
+defaults:
+  - _self_
+
+# hydra hijacks working directory by changing it to the new log directory
+# https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
+original_work_dir: ${hydra:runtime.cwd}
+
+data_dir: ${original_work_dir}/data/
+output_dir: ${data_dir}/processed/
+standardize: true
+create_voc_file: true
+return_dataframe: false
+is_fine_tune_batch: false
+min_token_len: 10
+max_token_len: 100
+n_jobs: -1

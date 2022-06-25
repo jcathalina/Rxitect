@@ -297,7 +297,7 @@ def get_fp_scores(smiles_back: List[str], target_smi: str, fp_type: str):
     return smiles_back_scores
 
 
-def clean_mol(smiles: str, is_isomeric: bool = False) -> str:
+def get_uncharged_largest_fragment(smiles: str) -> str:
     """Removes charges from SMILES string
     Args:
         smiles: SMILES string repr. of a molecule.
@@ -308,6 +308,23 @@ def clean_mol(smiles: str, is_isomeric: bool = False) -> str:
     mol = Chem.MolFromSmiles(smiles)
     mol = rdMolStandardize.ChargeParent(mol)
     if mol is not None:
-        return Chem.MolToSmiles(mol, isomericSmiles=is_isomeric)
+        return Chem.MolToSmiles(mol)
     else:
         return ""
+
+
+# Joblib-ready helper methods
+def clean_and_canonalize(smiles: str) -> str:
+    """Removes charges and canonalizes the SMILES representation of a molecule.
+    Args:
+        smiles (str): SMILES string representation of a molecule.
+    Returns:
+        cleaned Canonicalized SMILES (uncharged version of largest fragment), or empty string on invalid Mol.
+    """
+    processed_smiles = ""
+    try:
+        smiles = get_uncharged_largest_fragment(smiles)
+        processed_smiles = Chem.CanonSmiles(smiles)
+    except Exception as e:
+        print("SMILES Parsing Error: ", e)
+    return processed_smiles

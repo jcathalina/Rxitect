@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
+  - python=3.8
   - pip
   - rdkit
   - cudatoolkit=11.3
@@ -24,6 +24,7 @@ dependencies:
   - selfies
   - fastparquet
   - hydra
+  - wandb
 
   # dev dependencies
   - jupyterlab

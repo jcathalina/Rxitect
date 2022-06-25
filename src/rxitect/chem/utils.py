@@ -72,7 +72,9 @@ def batch_calc_fp(
     return fingerprints
 
 
-def batch_calc_ecfp(mols: Iterable[RDKitMol], radius: int = 3, bit_len: int = 2048) -> np.ndarray:
+def batch_calc_ecfp(
+    mols: Iterable[RDKitMol], radius: int = 3, bit_len: int = 2048
+) -> np.ndarray:
     fingerprints = np.zeros((len(mols), bit_len))
     for i, mol in enumerate(mols):
         fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=bit_len)
@@ -80,7 +82,9 @@ def batch_calc_ecfp(mols: Iterable[RDKitMol], radius: int = 3, bit_len: int = 20
     return fingerprints
 
 
-def batch_calc_physchem(mols: Iterable[RDKitMol], prop_list: List[str] = PROP_LIST) -> ArrayLike:
+def batch_calc_physchem(
+    mols: Iterable[RDKitMol], prop_list: List[str] = PROP_LIST
+) -> ArrayLike:
     assert (
         len(prop_list) == N_PHYSCHEM_PROPS
     ), f"Invalid number of properties: {len(prop_list)}, should be {N_PHYSCHEM_PROPS}"
@@ -139,11 +143,12 @@ def mol_to_selfies(
 def randomize_selfies(selfies: str, isomeric_smiles: bool = False) -> str:
     """Perform a randomization of a SELFIES string
     must be RDKit sanitizable"""
-    
+
     mol = mol_from_selfies(selfies)
     nmol = randomize_mol(mol)
     selfies = mol_to_selfies(mol=nmol, canonical=False, isomeric_smiles=isomeric_smiles)
     return selfies
+
 
 def randomize_mol(mol: RDKitMol) -> RDKitMol:
     """Performs a randomization of the atom order of an RDKit molecule"""

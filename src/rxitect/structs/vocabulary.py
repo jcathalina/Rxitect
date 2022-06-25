@@ -1,8 +1,8 @@
+import os
 import re
 from abc import ABC, abstractmethod
-import os
 from dataclasses import dataclass
-from typing import List, Tuple, Iterable, Optional
+from typing import Iterable, List, Optional, Tuple
 
 import selfies as sf
 import torch
@@ -22,7 +22,11 @@ class Vocabulary(ABC):
 
     def __post_init__(self):
         self.control = ["EOS", "GO"]
-        self.words = self.control + self.from_file(self.vocabulary_file_path) if self.vocabulary_file_path else self.control
+        self.words = (
+            self.control + self.from_file(self.vocabulary_file_path)
+            if self.vocabulary_file_path
+            else self.control
+        )
         self.size = len(self.words)
         self.tk2ix = dict(zip(self.words, range(self.size)))
         self.ix2tk = {v: k for k, v in self.tk2ix.items()}
@@ -81,7 +85,6 @@ class SelfiesVocabulary(Vocabulary):
 
 @dataclass
 class SmilesVocabulary(Vocabulary):
-
     @classmethod
     def tokenize(cls, smiles: str) -> List[str]:
         """
