@@ -2,7 +2,8 @@ import os
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple, Union
+import pandas as pd
 
 import selfies as sf
 import torch
@@ -62,6 +63,9 @@ class Vocabulary(ABC):
             words = list(sorted(set(chars)))
         return words
 
+    def initialize(self, mol_strings: Union[List[str], pd.Series]) -> None:
+        raise NotImplementedError("TODO")
+
     @abstractmethod
     def check_smiles(self, sequences) -> bool:
         pass
@@ -69,7 +73,7 @@ class Vocabulary(ABC):
 
 @dataclass
 class SelfiesVocabulary(Vocabulary):
-    max_len: int = 109  # longest SELFIES in ChEMBL v26
+    max_len: int = 109  # longest SELFIES in ChEMBL v26  # TODO: Check what this is for v30 now...
 
     @classmethod
     def tokenize(cls, selfie: str) -> List[str]:
