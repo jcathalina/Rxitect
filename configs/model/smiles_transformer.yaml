@@ -1,0 +1,12 @@
+_target_: rxitect.generator.models.smiles_transformer.SmilesTransformer
+lr: 0.001
+
+net:
+  _target_: rxitect.generator.models.components.transformer_encoder.TransformerEncoder
+  n_tokens: 85
+  d_model: 256
+  nhead: 8
+  num_encoder_layers: 4
+  dim_feedforward: 1024
+  dropout: 0.1
+  activation: relu

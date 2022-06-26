@@ -72,7 +72,6 @@ class ChemblSelfiesDataModule(LightningDataModule):
     def prepare_data(self) -> None:
         pass
         # TODO: Download the tokenized ChEMBL file here, saves us the params if we init the vocab internally as well.
-        
 
     def augment_selfies(self, selfies: str) -> str:
         pass
@@ -103,4 +102,4 @@ class ChemblSelfiesDataModule(LightningDataModule):
         return DataLoader(dataset=dataset,
                          batch_size=self.batch_size,
                          pin_memory=True,
-                         shuffle=True,)
+                         shuffle=False,)
