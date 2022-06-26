@@ -22,7 +22,7 @@ class TransformerEncoder(torch.nn.Module):
         self.fc_out = torch.nn.Linear(d_model, n_tokens)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        mask = self._generate_square_subsequent_mask(x.shape[0])  # .to(self.device)
+        mask = self._generate_square_subsequent_mask(x.shape[0]).to(device="cuda" if torch.cuda.is_available() else "cpu")
         embedded = self.embedding(x)
         positional_encoded = self.positional_encoder(embedded)
         encoded = self.encoder(positional_encoded, mask=mask)

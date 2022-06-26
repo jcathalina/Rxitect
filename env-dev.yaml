@@ -25,6 +25,7 @@ dependencies:
   - fastparquet
   - hydra
   - wandb
+  - python-dotenv
 
   # dev dependencies
   - jupyterlab
@@ -37,3 +38,5 @@ dependencies:
   # pip-only dependencies
   - pip:
     - pdoc3==0.10.0
+    - hydra-colorlog>=1.1.0
+    - hydra-optuna-sweeper>=1.1.0

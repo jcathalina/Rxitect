@@ -17,8 +17,7 @@ class SmilesTransformer(LightningModule):
                 # dropout: float = 0.1,
                 # activation: str = "relu",
                 # max_length: int = 1000,
-                # max_lr: float = 1e-3,
-                # epochs: int = 50,
+                max_lr: float = 1e-3,
                 ) -> None:
         super().__init__()
 
@@ -61,19 +60,28 @@ class SmilesTransformer(LightningModule):
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> float:
-        pass
+        loss = self.step(batch)
+        self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return loss
 
-    def on_epoch_end(self) -> None:
-        "Helper func. that resets metrics at the end of every epoch"
+    def on_train_epoch_end(self) -> None:
+        "Helper function that resets metrics at the end of every train epoch"
+        self.train_acc.reset()
+        self.test_acc.reset()
+        self.val_acc.reset()
+
+    def on_validation_epoch_end(self) -> None:
+        "Helper function that resets metrics at the end of every val epoch"
         self.train_acc.reset()
         self.test_acc.reset()
         self.val_acc.reset()
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters())
+        epochs = self.trainer.max_epochs
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=self.hparams.max_lr, 
-                       total_steps=None, epochs=self.hparams.epochs, steps_per_epoch=len(self.train_dataloader()),#We call train_dataloader, just to get the length, is this necessary?
-                       pct_start=6/self.hparams.epochs, anneal_strategy='cos', cycle_momentum=True, 
+                       total_steps=None, epochs=epochs, steps_per_epoch=len(self.trainer.datamodule.train_dataloader()),
+                       pct_start=0.1, anneal_strategy='cos', cycle_momentum=True, 
                        base_momentum=0.85, max_momentum=0.95,
                        div_factor=1e3, final_div_factor=1e3, last_epoch=-1)
         scheduler = {"scheduler": scheduler, "interval" : "step" }

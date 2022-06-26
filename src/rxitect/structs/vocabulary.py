@@ -13,7 +13,7 @@ from rdkit import Chem
 
 @dataclass
 class Vocabulary(ABC):
-    vocabulary_file_path: Optional[os.PathLike] = None
+    vocabulary_filepath: Optional[os.PathLike] = None
     max_len: int = 100
     control: List[str] = field(init=False)
     words: List[str] = field(init=False)
@@ -24,8 +24,8 @@ class Vocabulary(ABC):
     def __post_init__(self):
         self.control = ["EOS", "GO"]
         self.words = (
-            self.control + self.from_file(self.vocabulary_file_path)
-            if self.vocabulary_file_path
+            self.control + self.from_file(self.vocabulary_filepath)
+            if self.vocabulary_filepath
             else self.control
         )
         self.size = len(self.words)
@@ -57,8 +57,8 @@ class Vocabulary(ABC):
         return mol_str
 
     @classmethod
-    def from_file(cls, file_path: os.PathLike) -> List[str]:
-        with open(file=file_path, mode="r") as f:
+    def from_file(cls, filepath: os.PathLike) -> List[str]:
+        with open(file=filepath, mode="r") as f:
             chars = f.read().split()
             words = list(sorted(set(chars)))
         return words
