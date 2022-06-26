@@ -1,8 +1,8 @@
 _target_: rxitect.generator.datamodules.chembl_datamodule.ChemblSmilesDataModule
 
 data_dir: ${data_dir} # data_dir is specified in config.yaml
-batch_size: 128
-train_val_test_split: [70_000, 10_000, 20_000]
+batch_size: 256
+train_val_test_split: [1_309_000, 187_000, 374_000]
 num_workers: 4
 pin_memory: True
 chembl_smiles_filepath: ${data_dir}/processed/smiles_chembl_corpus.tsv

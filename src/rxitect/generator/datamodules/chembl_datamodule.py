@@ -7,7 +7,8 @@ from pytorch_lightning import LightningDataModule
 
 from rxitect.structs.vocabulary import SelfiesVocabulary, SmilesVocabulary
 from rdkit import Chem
-import dask.dataframe as dd
+# import dask.dataframe as dd  # dask partition problem
+import pandas as pd
 import numpy as np
 from pytorch_lightning.utilities.types import TRAIN_DATALOADERS, EVAL_DATALOADERS
 from torch.utils.data import DataLoader, random_split
@@ -42,7 +43,8 @@ class ChemblSmilesDataModule(LightningDataModule):
         return Chem.MolToSmiles(mol, canonical=False)
 
     def setup(self, stage: Optional[str] = None) -> None:
-        data = dd.read_table(self.chembl_smiles_filepath).head(n=100_000)
+        # data = dd.read_table(self.chembl_smiles_filepath).head(n=1_870_000)  # partition issues with dask
+        data = pd.read_table(self.chembl_smiles_filepath).head(n=1_870_000)
         data = MoleculeDataset(data, self.vocabulary)
         #Create splits for train/val
         self.train_data, self.val_data, self.test_data = random_split(
@@ -50,12 +52,6 @@ class ChemblSmilesDataModule(LightningDataModule):
                 lengths=self.hparams.train_val_test_split,
                 generator=torch.Generator().manual_seed(42),
         )
-        # np.random.seed(seed=42)
-        # idxs = np.array(range(len(self.data)))
-        # np.random.shuffle(idxs)
-        # val_idxs, train_idxs = idxs[:self.val_size], idxs[self.val_size:self.val_size+self.train_size]
-        # self.train_data = self.data.iloc[train_idxs]
-        # self.val_data = self.data.iloc[val_idxs]
 
         # TODO: initialize Vocabulary in here maybe to make things easier...
         # TODO: Add augmentation by randomization here.... (relies on the above step)
@@ -69,6 +65,13 @@ class ChemblSmilesDataModule(LightningDataModule):
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(dataset=self.val_data,
+                         batch_size=self.hparams.batch_size,
+                         pin_memory=self.hparams.pin_memory,
+                         num_workers=self.hparams.num_workers,
+                         shuffle=False,)
+
+    def test_dataloader(self) -> EVAL_DATALOADERS:
+        return DataLoader(dataset=self.test_data,
                          batch_size=self.hparams.batch_size,
                          pin_memory=self.hparams.pin_memory,
                          num_workers=self.hparams.num_workers,
