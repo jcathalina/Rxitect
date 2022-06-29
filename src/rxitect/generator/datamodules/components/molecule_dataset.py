@@ -12,8 +12,6 @@ class MoleculeDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index: int) -> torch.Tensor:
-        token_seq = self.data.token.iloc[index]
-        tensor = self.vocabulary.encode([token_seq.split(" ")]).reshape(-1)  # Reshape because encode takes list of lists.
-
-        # TODO: Maybe rewrite this to tokenize & encode on-the-fly?
+        smiles = self.data[self.vocabulary.mol_str_type].iloc[index]
+        tensor = self.vocabulary.encode(smiles)
         return tensor

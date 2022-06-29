@@ -3,7 +3,7 @@ max_lr: 0.001
 
 net:
   _target_: rxitect.generator.models.components.transformer_encoder.TransformerEncoder
-  n_tokens: 85
+  n_tokens: 45  # TODO: Make dynamic
   d_model: 256
   nhead: 8
   num_encoder_layers: 4

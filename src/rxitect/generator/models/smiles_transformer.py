@@ -1,22 +1,16 @@
+from typing import Optional
 import torch
 from pytorch_lightning import LightningModule
-from torchmetrics import MaxMetric
+from torchmetrics import MaxMetric, Metric
 from torchmetrics.classification.accuracy import Accuracy
 
 from rxitect.utils.types import StrDict
 
 
+# TODO: Pass sampler into transformer (init only with voc.), and define in hydra as well.
 class SmilesTransformer(LightningModule):
     def __init__(self,
                 net: torch.nn.Module,
-                # n_tokens: int,
-                # d_model: int = 256,
-                # nhead: int = 8,
-                # num_encoder_layers: int = 4,
-                # dim_feedforward: int = 1024,
-                # dropout: float = 0.1,
-                # activation: str = "relu",
-                # max_length: int = 1000,
                 max_lr: float = 1e-3,
                 ) -> None:
         super().__init__()
@@ -26,12 +20,6 @@ class SmilesTransformer(LightningModule):
         self.net = net
         self.criterion = torch.nn.CrossEntropyLoss()
 
-        self.train_acc = Accuracy()
-        self.val_acc = Accuracy()
-        self.test_acc = Accuracy()
-
-        self.val_acc_best = MaxMetric()
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
 
@@ -40,11 +28,11 @@ class SmilesTransformer(LightningModule):
         Helper function that makes sure our accuracy tracker does not store accuracy from
         post-training pytorch lightning validation sanity checks.
         """
-        self.val_acc_best.reset()
+        pass
 
     def step(self, batch: torch.Tensor):
         batch = batch.to(self.device)
-        preds = self.forward(batch[:-1])
+        preds = self(batch[:-1])  # self.forward(batch[:-1])  ## I don't think we should be manually calling forward outside of inf.
         loss = self.criterion(preds.transpose(0, 1).transpose(1, 2),
                               batch[1:].transpose(0, 1))
         return loss
@@ -66,15 +54,11 @@ class SmilesTransformer(LightningModule):
 
     def on_train_epoch_end(self) -> None:
         "Helper function that resets metrics at the end of every train epoch"
-        self.train_acc.reset()
-        self.test_acc.reset()
-        self.val_acc.reset()
+        pass
 
     def on_validation_epoch_end(self) -> None:
         "Helper function that resets metrics at the end of every val epoch"
-        self.train_acc.reset()
-        self.test_acc.reset()
-        self.val_acc.reset()
+        pass
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters())

@@ -15,72 +15,71 @@ from rdkit import Chem
 class Vocabulary(ABC):
     vocabulary_filepath: Optional[os.PathLike] = None
     max_len: int = 100
-    control: List[str] = field(init=False)
-    words: List[str] = field(init=False)
+    sentinel_tokens: List[str] = field(init=False)
+    start: str = "^"
+    end: str = "$"
+    unk: str = "?"
+    pad: str = " "
+
+    tokens: List[str] = field(init=False)
     size: int = field(init=False)
     tk2ix: dict = field(init=False)
     ix2tk: dict = field(init=False)
 
     def __post_init__(self):
-        self.control = ["EOS", "GO"]
-        self.words = (
-            self.control + self.from_file(self.vocabulary_filepath)
+        self.sentinel_tokens = [self.pad, self.start, self.end, self.unk]
+        self.tokens = (
+            self.sentinel_tokens + self.from_file(self.vocabulary_filepath)
             if self.vocabulary_filepath
-            else self.control
+            else self.sentinel_tokens
         )
-        self.size = len(self.words)
-        self.tk2ix = dict(zip(self.words, range(self.size)))
+        self.size = len(self.tokens)
+        self.tk2ix = dict(zip(self.tokens, range(self.size)))
         self.ix2tk = {v: k for k, v in self.tk2ix.items()}
 
     @classmethod
     @abstractmethod
     def tokenize(cls, selfie: str) -> List[str]:
         pass
+    
+    def encode(self, smiles: str) -> List[int]:
+        return [self.tk2ix[self.start]] + [self.tk2ix.get(char, self.tk2ix[self.unk]) for char in smiles] + [self.tk2ix[self.end]]
 
-    def encode(self, tokenized_mol_str: List[List[str]]) -> torch.Tensor:
-        tokens = torch.zeros(len(tokenized_mol_str), self.max_len, dtype=torch.long)
-        for i, selfie in enumerate(tokenized_mol_str):
-            for j, char in enumerate(selfie):
-                tokens[i, j] = self.tk2ix[char]
-        return tokens
+    def decode(self, vectorized_mol: Union[torch.Tensor, List[str]]) -> List[str]:
+        return [self.ix2tk[i] for i in vectorized_mol]
 
-    def decode(self, tensor: torch.Tensor) -> str:
-        tokens = []
-        for i in tensor:
-            token = self.ix2tk[i.item()]
-            if token == "EOS":
-                break
-            if token in self.control:
-                continue
-            tokens.append(token)
-        mol_str = "".join(tokens)
-        return mol_str
 
     @classmethod
     def from_file(cls, filepath: os.PathLike) -> List[str]:
         with open(file=filepath, mode="r") as f:
             chars = f.read().split()
-            words = list(sorted(set(chars)))
-        return words
+            tokens = list(sorted(set(chars)))
+        return tokens
 
-    def initialize(self, mol_strings: Union[List[str], pd.Series]) -> None:
-        raise NotImplementedError("TODO")
+    def fit(self, smiles: List[str]) -> None:
+        charset = set("".join(list(smiles)))
+        #Important that pad gets value 0
+        self.tokens = self.sentinel_tokens + list(charset)
+        self.size = len(self.tokens)
+        self.tk2ix = dict(zip(self.tokens, range(self.size)))
+        self.ix2tk = {v: k for k, v in self.tk2ix.items()}
 
     @abstractmethod
-    def check_smiles(self, sequences) -> bool:
+    def check_validity(self, sequences) -> bool:
         pass
 
 
 @dataclass
 class SelfiesVocabulary(Vocabulary):
     max_len: int = 109  # longest SELFIES in ChEMBL v26  # TODO: Check what this is for v30 now...
+    mol_str_type = "selfies"
 
     @classmethod
     def tokenize(cls, selfie: str) -> List[str]:
         selfie_tokens = sf.split_selfies(selfie)
         return list(selfie_tokens)
 
-    def check_smiles(self, sequences: torch.Tensor) -> Tuple[List[str], List[int]]:
+    def check_validity(self, sequences: torch.Tensor) -> Tuple[List[str], List[int]]:
         selfies = [self.decode(s) for s in sequences]
         smiles = [sf.decoder(selfie) for selfie in selfies]
         valids = [1 if Chem.MolFromSmiles(smile) else 0 for smile in smiles]
@@ -89,6 +88,8 @@ class SelfiesVocabulary(Vocabulary):
 
 @dataclass
 class SmilesVocabulary(Vocabulary):
+    mol_str_type = "smiles"
+
     @classmethod
     def tokenize(cls, smiles: str) -> List[str]:
         """
@@ -111,7 +112,7 @@ class SmilesVocabulary(Vocabulary):
                     tokens.append(char)
         return tokens
 
-    def check_smiles(
+    def check_validity(
         self, seqs: Iterable[torch.LongTensor]
     ) -> Tuple[List[str], List[int]]:
         """
