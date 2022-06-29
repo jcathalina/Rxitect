@@ -24,5 +24,5 @@ class Sampler:
                 if token == self.vocabulary.tk2ix[self.vocabulary.end]:
                     break
 
-            mol_string = "".join(self.vocabulary.decode(sample_tensor)).strip("".join(self.vocabulary.start, self.vocabulary.end))
+            mol_string = "".join(self.vocabulary.decode(sample_tensor.squeeze().detach().cpu().numpy())).strip("".join([self.vocabulary.start, self.vocabulary.end]))
             return mol_string

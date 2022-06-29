@@ -12,7 +12,8 @@ lightning_logs
 /.mypy_cache
 
 # log files
-logs/*.log
+logs
+!logs/.gitkeep
 
 # misc. training result files, TODO: Clean up when experiments done.
 models/dev_pretrained_selfies_rnn.ckpt
