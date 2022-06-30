@@ -5,12 +5,12 @@
 SHELL=/bin/bash
 CONDA_ACTIVATE=source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 CONDA_DEACTIVATE=source $$(conda info --base)/etc/profile.d/conda.sh ; conda deactivate ; conda deactivate
-DEV_ENV_NAME=rxt-dev
+DEV_ENV_NAME=rxitect
 
 
 install: 
 	@echo "Creating development environment for Rxitect..."
-	mamba env create -f env-dev.yaml
+	mamba env create -f environment.yaml
 	@echo "Installing Rxitect in editable mode..."
 	$(CONDA_ACTIVATE) $(DEV_ENV_NAME)
 	pip install -e .

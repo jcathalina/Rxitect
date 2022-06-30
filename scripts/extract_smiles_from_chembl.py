@@ -5,12 +5,12 @@ from typing import List, Optional
 from rdkit import Chem
 from tqdm import tqdm
 
-from rxitect.utils.types import PathLike
+from pathlib import Path
 
 
 def process_gzipped_chembl(
-    path_to_chembl_gz: PathLike,
-    output_path: PathLike,
+    path_to_chembl_gz: Path,
+    output_path: Path,
     return_smiles: bool = False,
     n_compounds: Optional[int] = None,
 ) -> Optional[List[str]]:

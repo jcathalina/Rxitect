@@ -1,4 +1,4 @@
-_target_: rxitect.generator.datamodules.chembl_datamodule.ChemblSmilesDataModule
+_target_: rxitect.datamodules.chembl_datamodule.ChemblSmilesDataModule
 
 batch_size: 256
 train_val_test_split: [350_000, 50_000, 100_000]
