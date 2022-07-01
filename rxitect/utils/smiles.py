@@ -1,12 +1,14 @@
-from asyncio.log import logger
 import re
 import torch
 import logging
+from rdkit import Chem, RDLogger
+from rdkit.Chem.MolStandardize import rdMolStandardize
 
 from rxitect.utils.tokenizer import Tokenizer
 from rxitect.utils.common import flatten_iterable
 from typing import *
 
+RDLogger.DisableLog("rdApp.*")
 logger = logging.getLogger(name=__name__)
 
 
@@ -79,3 +81,22 @@ class SmilesTokenizer(Tokenizer):
         smiles = self.detokenize(tokens)
         smiles = smiles.strip(self.start_token, self.end_token)
         return smiles
+
+
+def clean_and_canonalize(smiles: str) -> str:
+    """Removes charges and canonalizes the SMILES representation of a molecule.
+    Args:
+        smiles (str): SMILES string representation of a molecule.
+    Returns:
+        Cleaned (uncharged version of largest fragment) & Canonicalized SMILES, or empty string on invalid Mol.
+    """
+
+    processed_smiles = ""
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+        mol = rdMolStandardize.ChargeParent(mol)
+        smiles = Chem.MolToSmiles(smiles)
+        processed_smiles = Chem.CanonSmiles(smiles)
+    except Exception as e:
+        print("SMILES Parsing Error: ", e)
+    return processed_smiles

@@ -11,7 +11,7 @@ import numpy as np
 from pytorch_lightning.utilities.types import TRAIN_DATALOADERS, EVAL_DATALOADERS
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
-from rxitect.datasets.molecule_dataset import SmilesDataset
+from rxitect.datasets.smiles_dataset import SmilesDataset
 
 from rxitect.utils.smiles import SmilesTokenizer
 
@@ -27,7 +27,7 @@ class SmilesDataModule(LightningDataModule):
                  batch_size: int = 128,
                  num_workers: int = 0,
                  pin_memory: bool = False,
-                 random_state: Optional[int] = 42) -> None:
+                 random_state: int = 42) -> None:
         super().__init__()
 
         self.save_hyperparameters(logger=False)
@@ -50,7 +50,7 @@ class SmilesDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         num_samples = sum(self.hparams.train_val_test_split)
-        data = pd.read_table(self.data_filepath, usecols=["smiles"]).sample(n=num_samples, random_state=42)
+        data = pd.read_table(self.data_filepath, usecols=["smiles"]).sample(n=num_samples, random_state=self.hparams.random_state)
 
         if self.hparams.augment:
             #Atom order randomize SMILES
@@ -65,7 +65,7 @@ class SmilesDataModule(LightningDataModule):
         self.train_data, self.val_data, self.test_data = random_split(
                 dataset=data,
                 lengths=self.hparams.train_val_test_split,
-                generator=torch.Generator().manual_seed(42),
+                generator=torch.Generator().manual_seed(self.hparams.random_state),
         )
     
     def custom_collate_and_pad(self, batch: List[torch.Tensor]) -> List[torch.Tensor]:
