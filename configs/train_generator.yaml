@@ -50,7 +50,7 @@ train: True
 test: True
 
 # seed for random number generators in pytorch, numpy and python.random
-seed: 42  # null
+seed: 42 # null
 
 # default name for the experiment, determines logging folder path
 # (you can overwrite this name in experiment configs)

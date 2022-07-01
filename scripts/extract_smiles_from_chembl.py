@@ -1,11 +1,10 @@
 import gzip
 from logging import Logger
+from pathlib import Path
 from typing import List, Optional
 
 from rdkit import Chem
 from tqdm import tqdm
-
-from pathlib import Path
 
 
 def process_gzipped_chembl(
@@ -14,11 +13,8 @@ def process_gzipped_chembl(
     return_smiles: bool = False,
     n_compounds: Optional[int] = None,
 ) -> Optional[List[str]]:
-    """Handle gzipped sdf file with RDkit"""
-    assert (
-        path_to_chembl_gz.endswith(".gz"),
-        "The file that was passed is not gzipped.",
-    )
+    """Handle gzipped sdf file with RDkit."""
+    assert path_to_chembl_gz.endswith(".gz"), "The file that was passed is not gzipped."
     inf = gzip.open(path_to_chembl_gz)
     fsuppl = Chem.ForwardSDMolSupplier(inf)
     smiles = []

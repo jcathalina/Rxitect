@@ -8,7 +8,7 @@ CONDA_DEACTIVATE=source $$(conda info --base)/etc/profile.d/conda.sh ; conda dea
 DEV_ENV_NAME=rxitect
 
 
-install: 
+install:
 	@echo "Creating development environment for Rxitect..."
 	mamba env create -f environment.yaml
 	@echo "Installing Rxitect in editable mode..."
@@ -38,13 +38,13 @@ test:
 	pytest
 
 view_docs:
-	@echo Loading API documentation... 
-	pdoc src --http localhost:8080
+	@echo Loading API documentation...
+	pdoc rxitect --http localhost:8080
 
 save_docs:
 	@echo Saving documentation...
 	rm -rf docs
-	pdoc src -o docs
+	pdoc rxitect -o docs
 
 clean:
 	@echo "Deleting all compiled Python files..."
