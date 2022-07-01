@@ -41,8 +41,8 @@ class SmilesTokenizer(Tokenizer):
             A list of tokens that make up the passed SMILES.
         """
         tokens = []
-        regex = "([[^[]]{1,6}])"
-        mol_string = re.sub("[d+", "[", mol_string)
+        regex = "(\[[^\[\]]{1,6}\])"
+        mol_string = re.sub("\[\d+", "[", mol_string)
         mol_string = mol_string.replace("Br", "R").replace("Cl", "L")
         for word in re.split(regex, mol_string):
             if word == "" or word is None:

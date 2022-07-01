@@ -2,8 +2,8 @@ _target_: rxitect.models.smiles_transformer.SmilesTransformer
 max_lr: 0.001
 
 net:
-  _target_: rxitect.models.smiles_transformer.TransformerEncoder
-  n_tokens: 45 # TODO: Make dynamic
+  _target_: rxitect.models.modules.transformer_encoder.TransformerEncoder
+  n_tokens: 128
   d_model: 256
   nhead: 8
   num_encoder_layers: 4

@@ -42,14 +42,14 @@ class SmilesDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         num_samples = sum(self.hparams.train_val_test_split)
-        data = pd.read_table(self.data_filepath, usecols=["smiles"]).sample(
+        data = pd.read_table(self.hparams.data_filepath, usecols=["smiles"]).sample(
             n=num_samples, random_state=self.hparams.random_state
         )
 
         if self.hparams.augment:
             # Atom order randomize SMILES
             if self.hparams.npartitions:
-                logger.info(f"Randomizing SMILES using {self.hparams.npatitions} partitions...")
+                logger.info(f"Randomizing SMILES using {self.hparams.npartitions} partitions...")
                 ddf = dd.from_pandas(data, npartitions=self.hparams.npartitions)
                 data["smiles"] = ddf.map_partitions(_dist_randomize_smiles, meta="str").compute(
                     scheduler="processes"

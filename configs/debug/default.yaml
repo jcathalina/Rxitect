@@ -14,6 +14,8 @@ trainer:
 
 datamodule:
   num_workers: 0 # debuggers don't like multiprocessing
+  npartitions: null # using sequential pandas randomization for debugging
+  augment: False # Skipping augmentation makes for faster debugging, set to True if that's what you're testing.
   pin_memory: False # disable gpu memory pin
 
 # sets level of all command line loggers to 'DEBUG'
