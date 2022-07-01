@@ -1,7 +1,0 @@
-_target_: rxitect.generator.datamodules.zinc_shard_datamodule.ZincShardDataModule
-
-batch_size: 128
-train_val_test_split: [200_000, 200, 0]
-num_workers: 4
-pin_memory: True
-zinc_smiles_filepath: ${data_dir}raw/EE/EEBD.smi

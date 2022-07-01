@@ -1,8 +1,0 @@
-_target_: rxitect.datamodules.chembl_datamodule.ChemblSmilesDataModule
-
-batch_size: 256
-train_val_test_split: [350_000, 50_000, 100_000]
-num_workers: 4
-pin_memory: True
-chembl_smiles_filepath: ${data_dir}/processed/smiles_chembl_corpus.tsv
-augment: True
