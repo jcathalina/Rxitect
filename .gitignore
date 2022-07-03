@@ -37,6 +37,8 @@ models/*
 benchmarks/*
 !benchmarks/.gitkeep
 /dask-worker-space
+*.log
+/checkpoints
 
 # environment
 .env

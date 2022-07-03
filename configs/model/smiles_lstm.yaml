@@ -1,0 +1,5 @@
+_target_: rxitect.models.smiles_lstm.SmilesLSTM
+vocabulary_filepath: ${data_dir}/processed/chembl.v30.voc.txt
+embed_size: 128
+hidden_size: 512
+lr: 0.001

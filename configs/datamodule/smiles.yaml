@@ -1,7 +1,7 @@
 _target_: rxitect.datamodules.smiles_datamodule.SmilesDataModule
 
 data_filepath: ${data_dir}/processed/chembl.v30.clean.smi
-train_val_test_split: [350_000, 50_000, 100_000]
+train_val_test_split: [35_000, 5_000, 10_000]
 augment: True
 batch_size: 256
 num_workers: 2

@@ -4,9 +4,9 @@ Module rxitect.utils.common
 Functions
 ---------
 
-
+    
 `flatten_iterable(iterable: Iterable[+T_co]) ‑> Iterable[+T_co]`
-:
+:   
 
 Classes
 -------
@@ -14,8 +14,8 @@ Classes
 `BlockDataLoader(dataset: torch.utils.data.dataset.Dataset, batch_size: int = 100, block_size: int = 10000, shuffle: bool = True, n_workers: int = 0, pin_memory: bool = True)`
 :   Main `DataLoader` class which has been modified so as to read training data from disk in
     blocks, as opposed to a single line at a time (as is done in the original `DataLoader` class).
-
-    From: https://github.com/MolecularAI/GraphINVENT/blob/653edcf0c73c216df571c6aa1c7f750cd759ac0a/graphinvent/BlockDatasetLoader.py#L11
+    
+    From: https://github.com/MolecularAI/GraphINVENT/
 
     ### Ancestors (in MRO)
 
@@ -58,5 +58,5 @@ Classes
 
 `ShuffleBlockWrapper(data: torch.Tensor)`
 :   Wrapper class used to wrap a block of data, enabling data to get shuffled.
-
+    
     *within* a block.

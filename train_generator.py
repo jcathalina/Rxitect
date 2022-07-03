@@ -9,7 +9,7 @@ from rxitect import utils
 dotenv.load_dotenv(override=True)
 
 
-@hydra.main(config_path="configs", config_name="train_generator.yaml")
+@hydra.main(version_base=None, config_path="configs", config_name="train_generator.yaml")
 def main(config: DictConfig):
 
     # Imports can be nested inside @hydra.main to optimize tab completion
