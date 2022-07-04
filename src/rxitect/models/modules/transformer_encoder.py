@@ -7,7 +7,7 @@ from rxitect.models.modules.positional_encoding import PositionalEncoding
 class TransformerEncoder(nn.Module):
     def __init__(
         self,
-        n_tokens: int = 128,
+        n_tokens: int = 110,
         d_model: int = 256,
         nhead: int = 8,
         num_encoder_layers: int = 4,

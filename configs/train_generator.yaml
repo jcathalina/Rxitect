@@ -3,8 +3,8 @@
 # specify here default training configuration
 defaults:
   - _self_
-  - datamodule: smiles.yaml
-  - model: smiles_transformer.yaml
+  - datamodule: selfies.yaml
+  - model: selfies_transformer.yaml
   - callbacks: default.yaml
   - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default.yaml

@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 
 
-class SmilesTransformer(LightningModule):
+class MoleculeTransformer(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,

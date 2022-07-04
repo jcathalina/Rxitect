@@ -1,0 +1,4 @@
+outs:
+- md5: fbb91af5d164e960dbf77f388f5132e4
+  size: 419512275
+  path: chembl.v30.clean.selfies

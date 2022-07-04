@@ -1,0 +1,10 @@
+_target_: rxitect.datamodules.selfies_datamodule.SelfiesDataModule
+
+data_filepath: ${data_dir}/processed/chembl.v30.clean.selfies
+train_val_test_split: [35_000, 5_000, 10_000]
+augment: False
+batch_size: 256
+num_workers: 2
+npartitions: 0
+pin_memory: True
+random_state: 42

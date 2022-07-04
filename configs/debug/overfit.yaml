@@ -6,6 +6,6 @@ defaults:
   - default.yaml
 
 trainer:
-  gpus: 1
+  gpus: 0
   max_epochs: 20
   overfit_batches: 3
