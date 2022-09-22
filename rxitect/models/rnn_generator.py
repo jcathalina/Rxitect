@@ -75,12 +75,12 @@ class LSTMGenerator(nn.Module):
         self.to(self.device)
 
     def forward(
-        self, inp: torch.Tensor, hidden: torch.Tensor
+        self, x: torch.Tensor, h: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        output = self.embedding_layer(inp.unsqueeze(dim=-1))
-        output, hidden_out = self.lstm(output, hidden)
-        output = self.output_layer(output).squeeze(dim=1)
-        return output, hidden_out
+        x = self.embedding_layer(x.unsqueeze(dim=-1))
+        x, h_out = self.lstm(x, h)
+        x = self.output_layer(x).squeeze(dim=1)
+        return x, h_out
 
     def init_hidden(self, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
         h = torch.rand(3, batch_size, self.hidden_size, device=self.device)

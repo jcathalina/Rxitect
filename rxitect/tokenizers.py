@@ -1,12 +1,11 @@
-from typing import List, Optional
+from typing import List
 import torch
+import re
 
 from abc import ABC, abstractmethod
 
 
 class Tokenizer(ABC):
-    vocabulary_size: int
-
     @abstractmethod
     def encode(self, molecules: List[str]) -> torch.Tensor:
         pass
@@ -24,11 +23,10 @@ class Tokenizer(ABC):
 
 class SmilesTokenizer(Tokenizer):
     def __init__(self, vocabulary_filepath: str, max_len: int) -> None:
-        SENTINEL_TOKENS = ["GO", "EOS", "nop"]
-
-        self.start_token = SENTINEL_TOKENS[0]
-        self.stop_token = SENTINEL_TOKENS[1]
-        self.nop_token = SENTINEL_TOKENS[2]
+        self.start_token = "GO"
+        self.stop_token = "EOS"
+        self.pad_token = " "
+        SENTINEL_TOKENS = [self.start_token, self.stop_token, self.pad_token]
         self.vocabulary = SENTINEL_TOKENS + self._get_vocabulary_from_file(
             vocabulary_filepath
         )
@@ -41,12 +39,56 @@ class SmilesTokenizer(Tokenizer):
         print("Encoding some SMILES!")
         encoded_smiles = torch.zeros(len(molecules), self.max_len, dtype=torch.long)
         for i, smi in enumerate(molecules):
-            for j, token in enumerate(smi):
+            tokenized_smi = self._tokenize(smi)
+            for j, token in enumerate(tokenized_smi):
                 encoded_smiles[i, j] = self.tk2ix_[token]
         return encoded_smiles
 
     def decode(self, encoded_molecules: torch.Tensor) -> List[str]:
         print("Decoding some tensors to SMILES!")
+        decoded_smiles = []
+        encoded_molecules = encoded_molecules.cpu().detach().numpy()
+        for enc_smiles in encoded_molecules:
+            chars = []
+            for i in enc_smiles:
+                if i == self.tk2ix_[self.stop_token]:
+                    break
+                chars.append(self.ix2tk_[i])
+            smiles = "".join(chars)
+            smiles = smiles.replace("L", "Cl").replace("R", "Br")
+            decoded_smiles.append(smiles)
+        return decoded_smiles
+
+    def _tokenize(self, smiles: str) -> List[str]:
+        """
+        Takes a SMILES string and returns a list containing the tokens its composed of.
+        SOURCE: https://github.com/MarcusOlivecrona/REINVENT/
+        
+        Parameters
+        ----------
+        smiles: A SMILES string representing a molecule
+        """
+        regex = '(\[[^\[\]]{1,6}\])'
+        smiles = self._replace_halogen(smiles)
+        char_list = re.split(regex, smiles)
+        tokenized = []
+        for char in char_list:
+            if char.startswith('['):
+                tokenized.append(char)
+            else:
+                chars = [unit for unit in char]
+                [tokenized.append(unit) for unit in chars]
+        tokenized.append(self.stop_token)
+        return tokenized
+
+    def _replace_halogen(self, smiles: str) -> str:
+        """Regex to replace Br and Cl with single letters"""
+        br = re.compile('Br')
+        cl = re.compile('Cl')
+        smiles = br.sub('R', smiles)
+        smiles = cl.sub('L', smiles)
+
+        return smiles
 
 
 class SelfiesTokenizer(Tokenizer):
@@ -55,7 +97,7 @@ class SelfiesTokenizer(Tokenizer):
 
         self.start_token = SENTINEL_TOKENS[0]
         self.stop_token = SENTINEL_TOKENS[1]
-        self.nop_token = SENTINEL_TOKENS[2]
+        self.pad_token = SENTINEL_TOKENS[2]
         self.vocabulary = SENTINEL_TOKENS + self._get_vocabulary_from_file(
             vocabulary_filepath
         )
