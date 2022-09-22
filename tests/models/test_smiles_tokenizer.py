@@ -12,7 +12,7 @@ def smiles_tokenizer() -> SmilesTokenizer:
 
 
 def test_decoding_encoded_smiles_reconstructs_smiles_correctly(smiles_tokenizer):
-    sample_smiles = ["CCC", "CCBr[nH]"]
+    sample_smiles = "CCBr[nH]"
     tokenizer = smiles_tokenizer
     encoded_smiles = tokenizer.encode(sample_smiles)
     decoded_smiles = tokenizer.decode(encoded_smiles)

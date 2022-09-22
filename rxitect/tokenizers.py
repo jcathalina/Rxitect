@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 
 
 class Tokenizer(ABC):
+    vocabulary_size_: int
+
     @abstractmethod
     def encode(self, molecules: List[str]) -> torch.Tensor:
         pass
@@ -35,7 +37,15 @@ class SmilesTokenizer(Tokenizer):
         self.tk2ix_ = dict(zip(self.vocabulary, range(self.vocabulary_size_)))
         self.ix2tk_ = {ix: tk for tk, ix in self.tk2ix_.items()}
 
-    def encode(self, molecules: List[str]) -> torch.Tensor:
+    def encode(self, molecule: str) -> torch.Tensor:
+        print("Encoding single SMILES!")
+        encoded_smiles = torch.zeros(self.max_len, dtype=torch.long)
+        tokenized_smiles = self._tokenize(molecule)
+        for i, token in enumerate(tokenized_smiles):
+            encoded_smiles[i] = self.tk2ix_[token]
+        return encoded_smiles
+
+    def batch_encode(self, molecules: List[str]) -> torch.Tensor:
         print("Encoding some SMILES!")
         encoded_smiles = torch.zeros(len(molecules), self.max_len, dtype=torch.long)
         for i, smi in enumerate(molecules):
@@ -44,7 +54,19 @@ class SmilesTokenizer(Tokenizer):
                 encoded_smiles[i, j] = self.tk2ix_[token]
         return encoded_smiles
 
-    def decode(self, encoded_molecules: torch.Tensor) -> List[str]:
+    def decode(self, encoded_molecule: torch.Tensor) -> List[str]:
+        print("Decoding single tensor to SMILES!")
+        encoded_molecule = encoded_molecule.cpu().detach().numpy()
+        chars = []
+        for i in encoded_molecule:
+            if i == self.tk2ix_[self.stop_token]:
+                break
+            chars.append(self.ix2tk_[i])
+        smiles = "".join(chars)
+        smiles = smiles.replace("L", "Cl").replace("R", "Br")
+        return smiles
+
+    def batch_decode(self, encoded_molecules: torch.Tensor) -> List[str]:
         print("Decoding some tensors to SMILES!")
         decoded_smiles = []
         encoded_molecules = encoded_molecules.cpu().detach().numpy()
