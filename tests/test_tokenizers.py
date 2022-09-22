@@ -1,7 +1,7 @@
 import pytest
-
-from rxitect.tokenizers import get_tokenizer, SmilesTokenizer, SelfiesTokenizer
 from pyprojroot import here
+
+from rxitect.tokenizers import SelfiesTokenizer, SmilesTokenizer, get_tokenizer
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def test_decoding_encoded_smiles_reconstructs_smiles_correctly(smiles_tokenizer)
     tokenizer = smiles_tokenizer
     encoded_smiles = tokenizer.encode(sample_smiles)
     decoded_smiles = tokenizer.decode(encoded_smiles)
-    
+
     assert decoded_smiles == sample_smiles
 
 
@@ -32,5 +32,5 @@ def test_decoding_encoded_selfies_reconstructs_selfies_correctly(selfies_tokeniz
     tokenizer = selfies_tokenizer
     encoded_selfies = tokenizer.encode(sample_selfies)
     decoded_smiles = tokenizer.decode(encoded_selfies)
-    
+
     assert decoded_smiles == sample_selfies

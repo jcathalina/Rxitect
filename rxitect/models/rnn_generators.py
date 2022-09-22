@@ -1,4 +1,5 @@
 from typing import Tuple
+
 import torch
 import torch.nn as nn
 
@@ -58,7 +59,9 @@ class LSTMGenerator(nn.Module):
         """
         super().__init__()
         self.tokenizer = get_tokenizer(
-            molecule_repr, vocabulary_filepath=vocabulary_filepath, max_len=max_output_len
+            molecule_repr,
+            vocabulary_filepath=vocabulary_filepath,
+            max_len=max_output_len,
         )
         self.embedding_size = embedding_size
         self.hidden_size = hidden_size

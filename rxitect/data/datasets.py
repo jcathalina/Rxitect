@@ -1,7 +1,7 @@
 import torch
-
 from torch.utils.data import Dataset
-from rxitect.tokenizers import SmilesTokenizer, SelfiesTokenizer
+
+from rxitect.tokenizers import SelfiesTokenizer, SmilesTokenizer
 
 
 class SmilesDataset(Dataset):
@@ -9,7 +9,7 @@ class SmilesDataset(Dataset):
         self.tokenizer = tokenizer
         with open(dataset_filepath, "r") as f:
             self.smiles = [line.split()[0] for line in f]
-    
+
     def __getitem__(self, index: int) -> torch.Tensor:
         smiles = self.smiles[index]
         return self.tokenizer.encode(smiles)
@@ -26,7 +26,7 @@ class SmilesDataset(Dataset):
         max_len = max([seq.size(0) for seq in arr])
         collated_arr = torch.zeros(len(arr), max_len)
         for i, seq in enumerate(arr):
-            collated_arr[i, :seq.size(0)] = seq
+            collated_arr[i, : seq.size(0)] = seq
         return collated_arr
 
 
@@ -35,7 +35,7 @@ class SelfiesDataset(Dataset):
         self.tokenizer = tokenizer
         with open(dataset_filepath, "r") as f:
             self.selfies = [line.split()[0] for line in f]
-    
+
     def __getitem__(self, index: int) -> torch.Tensor:
         selfies = self.selfies[index]
         return self.tokenizer.encode(selfies)
@@ -52,5 +52,5 @@ class SelfiesDataset(Dataset):
         max_len = max([seq.size(0) for seq in arr])
         collated_arr = torch.zeros(len(arr), max_len)
         for i, seq in enumerate(arr):
-            collated_arr[i, :seq.size(0)] = seq
+            collated_arr[i, : seq.size(0)] = seq
         return collated_arr

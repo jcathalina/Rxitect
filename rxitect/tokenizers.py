@@ -1,9 +1,9 @@
-from typing import List
-import torch
 import re
-import selfies as sf
-
 from abc import ABC, abstractmethod
+from typing import List
+
+import selfies as sf
+import torch
 
 
 class Tokenizer(ABC):
@@ -86,17 +86,17 @@ class SmilesTokenizer(Tokenizer):
         """
         Takes a SMILES string and returns a list containing the tokens its composed of.
         SOURCE: https://github.com/MarcusOlivecrona/REINVENT/
-        
+
         Parameters
         ----------
         smiles: A SMILES string representing a molecule
         """
-        regex = '(\[[^\[\]]{1,6}\])'
+        regex = "(\[[^\[\]]{1,6}\])"
         smiles = self._replace_halogen(smiles)
         char_list = re.split(regex, smiles)
         tokenized = []
         for char in char_list:
-            if char.startswith('['):
+            if char.startswith("["):
                 tokenized.append(char)
             else:
                 chars = [unit for unit in char]
@@ -106,10 +106,10 @@ class SmilesTokenizer(Tokenizer):
 
     def _replace_halogen(self, smiles: str) -> str:
         """Regex to replace Br and Cl with single letters"""
-        br = re.compile('Br')
-        cl = re.compile('Cl')
-        smiles = br.sub('R', smiles)
-        smiles = cl.sub('L', smiles)
+        br = re.compile("Br")
+        cl = re.compile("Cl")
+        smiles = br.sub("R", smiles)
+        smiles = cl.sub("L", smiles)
 
         return smiles
 
@@ -150,7 +150,7 @@ class SelfiesTokenizer(Tokenizer):
     def _tokenize(self, selfies: str) -> List[str]:
         """
         Takes a SELFIES string and returns a list containing the tokens its composed of.
-        
+
         Parameters
         ----------
         selfies: A SELFIES string representing a molecule
@@ -160,10 +160,14 @@ class SelfiesTokenizer(Tokenizer):
         return tokenized_selfies
 
 
-def get_tokenizer(molecule_repr: str, vocabulary_filepath: str, max_len: int) -> Tokenizer:
+def get_tokenizer(
+    molecule_repr: str, vocabulary_filepath: str, max_len: int
+) -> Tokenizer:
     if molecule_repr == "smiles":
         return SmilesTokenizer(vocabulary_filepath=vocabulary_filepath, max_len=max_len)
     elif molecule_repr == "selfies":
-        return SelfiesTokenizer(vocabulary_filepath=vocabulary_filepath, max_len=max_len)
+        return SelfiesTokenizer(
+            vocabulary_filepath=vocabulary_filepath, max_len=max_len
+        )
     else:
         raise ValueError(molecule_repr)
