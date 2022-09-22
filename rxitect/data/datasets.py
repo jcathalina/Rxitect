@@ -24,7 +24,7 @@ class SmilesDataset(Dataset):
     def collate_fn(cls, arr: torch.Tensor) -> torch.Tensor:
         """Function to take a list of encoded sequences and turn them into a batch"""
         max_len = max([seq.size(0) for seq in arr])
-        collated_arr = torch.zeros(len(arr), max_len)
+        collated_arr = torch.zeros(len(arr), max_len, dtype=torch.long)
         for i, seq in enumerate(arr):
             collated_arr[i, : seq.size(0)] = seq
         return collated_arr

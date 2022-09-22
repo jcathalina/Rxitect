@@ -39,7 +39,6 @@ class SmilesTokenizer(Tokenizer):
         self.ix2tk_ = {ix: tk for tk, ix in self.tk2ix_.items()}
 
     def encode(self, molecule: str) -> torch.Tensor:
-        print("Encoding single SMILES!")
         encoded_smiles = torch.zeros(self.max_len, dtype=torch.long)
         tokenized_smiles = self._tokenize(molecule)
         for i, token in enumerate(tokenized_smiles):
@@ -47,7 +46,6 @@ class SmilesTokenizer(Tokenizer):
         return encoded_smiles
 
     def batch_encode(self, molecules: List[str]) -> torch.Tensor:
-        print("Encoding some SMILES!")
         encoded_smiles = torch.zeros(len(molecules), self.max_len, dtype=torch.long)
         for i, smi in enumerate(molecules):
             tokenized_smi = self._tokenize(smi)
@@ -56,7 +54,6 @@ class SmilesTokenizer(Tokenizer):
         return encoded_smiles
 
     def decode(self, encoded_molecule: torch.Tensor) -> List[str]:
-        print("Decoding single tensor to SMILES!")
         encoded_molecule = encoded_molecule.cpu().detach().numpy()
         chars = []
         for i in encoded_molecule:
@@ -68,7 +65,6 @@ class SmilesTokenizer(Tokenizer):
         return smiles
 
     def batch_decode(self, encoded_molecules: torch.Tensor) -> List[str]:
-        print("Decoding some tensors to SMILES!")
         decoded_smiles = []
         encoded_molecules = encoded_molecules.cpu().detach().numpy()
         for enc_smiles in encoded_molecules:

@@ -37,3 +37,7 @@ def test_dataloader_loads_dataset_in_properly(smiles_dataloader):
     dataloader: DataLoader = smiles_dataloader
     print(dataloader.__dict__)
     assert len(dataloader.dataset) == 500
+
+
+def test_lstm_can_overfit_sample_test_dataset(smiles_dataloader, lstm):
+    pass
