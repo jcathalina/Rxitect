@@ -1,6 +1,7 @@
 from typing import List
 import torch
 import re
+import selfies as sf
 
 from abc import ABC, abstractmethod
 
@@ -115,11 +116,10 @@ class SmilesTokenizer(Tokenizer):
 
 class SelfiesTokenizer(Tokenizer):
     def __init__(self, vocabulary_filepath: str, max_len: int) -> None:
-        SENTINEL_TOKENS = ["[GO]", "[EOS]", "[nop]"]
-
-        self.start_token = SENTINEL_TOKENS[0]
-        self.stop_token = SENTINEL_TOKENS[1]
-        self.pad_token = SENTINEL_TOKENS[2]
+        self.start_token = "[GO]"
+        self.stop_token = "[EOS]"
+        self.pad_token = "[nop]"
+        SENTINEL_TOKENS = [self.pad_token, self.start_token, self.stop_token]
         self.vocabulary = SENTINEL_TOKENS + self._get_vocabulary_from_file(
             vocabulary_filepath
         )
@@ -128,11 +128,36 @@ class SelfiesTokenizer(Tokenizer):
         self.tk2ix_ = dict(zip(self.vocabulary, range(self.vocabulary_size_)))
         self.ix2tk_ = {ix: tk for tk, ix in self.tk2ix_.items()}
 
-    def encode(molecules: List[str]) -> torch.Tensor:
+    def encode(self, molecule: List[str]) -> torch.Tensor:
         print("Encoding some SELFIES!")
+        encoded_smiles = torch.zeros(self.max_len, dtype=torch.long)
+        tokenized_smiles = self._tokenize(molecule)
+        for i, token in enumerate(tokenized_smiles):
+            encoded_smiles[i] = self.tk2ix_[token]
+        return encoded_smiles
 
-    def decode(encoded_molecules: torch.Tensor) -> List[str]:
+    def decode(self, encoded_molecule: torch.Tensor) -> List[str]:
         print("Decoding some tensors to SELFIES!")
+        encoded_molecule = encoded_molecule.cpu().detach().numpy()
+        chars = []
+        for i in encoded_molecule:
+            if i == self.tk2ix_[self.stop_token]:
+                break
+            chars.append(self.ix2tk_[i])
+        selfies = "".join(chars)
+        return selfies
+
+    def _tokenize(self, selfies: str) -> List[str]:
+        """
+        Takes a SELFIES string and returns a list containing the tokens its composed of.
+        
+        Parameters
+        ----------
+        selfies: A SELFIES string representing a molecule
+        """
+        tokenized_selfies = list(sf.split_selfies(selfies))
+        tokenized_selfies.append(self.stop_token)
+        return tokenized_selfies
 
 
 def get_tokenizer(molecule_repr: str, vocabulary_filepath: str, max_len: int) -> Tokenizer:
