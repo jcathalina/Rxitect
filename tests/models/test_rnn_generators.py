@@ -17,7 +17,7 @@ def smiles_tokenizer() -> SmilesTokenizer:
 
 
 @pytest.fixture()
-def smiles_dataloader(smiles_tokenizer) -> DataLoader:
+def smiles_dataloader(smiles_tokenizer: SmilesTokenizer) -> DataLoader:
     test_dataset_filepath = here() / "tests/data/test.smi"
     dataset = SmilesDataset(
         dataset_filepath=test_dataset_filepath, tokenizer=smiles_tokenizer
@@ -33,11 +33,6 @@ def smiles_dataloader(smiles_tokenizer) -> DataLoader:
     return dataloader
 
 
-def test_dataloader_loads_dataset_in_properly(smiles_dataloader):
-    dataloader: DataLoader = smiles_dataloader
-    print(dataloader.__dict__)
+def test_dataloader_loads_dataset_in_properly(smiles_dataloader: DataLoader):
+    dataloader = smiles_dataloader
     assert len(dataloader.dataset) == 500
-
-
-def test_lstm_can_overfit_sample_test_dataset(smiles_dataloader, lstm):
-    pass

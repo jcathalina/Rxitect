@@ -9,12 +9,13 @@ channels:
 dependencies:
   - python=3.8
   - pytorch=1.11
+  - pytorch-lightning=1.7.6
   - torchmetrics=0.9.2
-  - pyg
+  - pyg=2.0.4
   - cudatoolkit=11.3
   - rdkit=2022.03.04
   - poetry>=1.1.4,<2.0
   - pip>=20.0
-  - h5py
+  - h5py=3.7.0
   - pip:
     - https://github.com/MolecularAI/aizynthfinder/archive/v3.4.0.tar.gz
