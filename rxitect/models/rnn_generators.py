@@ -1,12 +1,14 @@
 from typing import Tuple
 
 import torch
+import pytorch_lightning as pl
 import torch.nn as nn
 
 from rxitect.tokenizers import get_tokenizer
+from rxitect import utils
 
 
-class LSTMGenerator(nn.Module):
+class LSTMGenerator(pl.LightningModule):
     """
     A molecule generator that uses an LSTM to learn how to build valid molecular representations
     through BPTT.
@@ -25,8 +27,6 @@ class LSTMGenerator(nn.Module):
         TODO
     output_layer : torch.nn.Linear
         TODO
-    device : torch.device
-        TODO
     """
 
     def __init__(
@@ -37,7 +37,8 @@ class LSTMGenerator(nn.Module):
         embedding_size: int = 128,
         hidden_size: int = 512,
         num_layers: int = 3,
-        device: str = "cpu",
+        lr: float = 1e-3,
+        weight_decay: float = 0,
     ) -> None:
         """
         Parameters
@@ -54,7 +55,9 @@ class LSTMGenerator(nn.Module):
             The size of the hidden layer (default is 512)
         num_layers : int
             TODO
-        device : str
+        lr: float
+            The learning rate for the LSTM generator (default is 1e-3)
+        weight_decay: float
             TODO
         """
         super().__init__()
@@ -72,10 +75,7 @@ class LSTMGenerator(nn.Module):
             embedding_size, hidden_size, num_layers=num_layers, batch_first=True
         )
         self.output_layer = nn.Linear(hidden_size, self.tokenizer.vocabulary_size_)
-
-        # Store base device of model as attribute and send model if necessary.
-        self.device = torch.device(device)
-        self.to(self.device)
+        self.lr = lr
 
     def forward(
         self, x: torch.Tensor, h: torch.Tensor
@@ -84,6 +84,29 @@ class LSTMGenerator(nn.Module):
         x, h_out = self.lstm(x, h)
         x = self.output_layer(x).squeeze(dim=1)
         return x, h_out
+
+    def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
+        loss = self.likelihood(batch)
+        loss = -loss.mean()
+        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def validation_step(self, batch: torch.Tensor, batch_idx: torch.Tensor) -> torch.Tensor:
+        loss = self.likelihood(batch)
+        loss = -loss.mean()
+        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def on_validation_epoch_end(self) -> None:
+        sequences = self.sample(1024)
+        sequences = utils.filter_duplicate_tensors(sequences)
+        valid_arr = [utils.is_valid_smiles(smi) for smi in self.tokenizer.batch_decode(sequences)]
+        frac_valid = sum(valid_arr) / len(valid_arr)
+        self.log("frac_valid_smiles", frac_valid)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        return optimizer
 
     def init_hidden(self, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
         h = torch.rand(3, batch_size, self.hidden_size, device=self.device)
@@ -108,7 +131,7 @@ class LSTMGenerator(nn.Module):
             x = target[:, step]
         return scores
 
-    def sample(self, batch_size: int):
+    def sample(self, batch_size: int, max_len: int = 140):
         x = torch.tensor(
             [self.tokenizer.tk2ix_[self.tokenizer.start_token]] * batch_size,
             dtype=torch.long,
@@ -116,11 +139,11 @@ class LSTMGenerator(nn.Module):
         )
         h = self.init_hidden(batch_size)
         sequences = torch.zeros(
-            batch_size, self.tokenizer.max_len, dtype=torch.long, device=self.device
+            batch_size, max_len, dtype=torch.long, device=self.device
         )
         is_end = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
 
-        for step in range(self.tokenizer.max_len):
+        for step in range(max_len):
             logit, h = self(x, h)
             proba = logit.softmax(dim=-1)
             x = torch.multinomial(proba, 1).view(-1)
@@ -198,36 +221,14 @@ if __name__ == "__main__":
         )
         return dataloader
 
-    class Utils:
-        def __init__(self):
-            self.dev = "cuda"
-
-    utils = Utils()
-
     lr = 1e-3
-    epochs = 1_000
+    epochs = 5
 
     net = LSTMGenerator(
         vocabulary_filepath=here() / "tests/data/test_smiles_voc.txt",
-        device="cuda",
         max_output_len=200,
     )
     dataloader = smiles_dataloader(net.tokenizer)
 
-    optimizer = optim.Adam(net.parameters(), lr=lr)
-    for epoch in range(epochs):
-        for i, batch in enumerate(dataloader):
-            print(i)
-            optimizer.zero_grad()
-            loss_train = net.likelihood(batch.to(utils.dev))
-            loss_train = -loss_train.mean()
-            loss_train.backward()
-            optimizer.step()
-            if i % 1 == 0:
-                # seqs = net.sample(len(batch * 2))
-                info = "Epoch: %d step: %d loss_train: %.3f" % (
-                    epoch,
-                    i,
-                    loss_train.item(),
-                )
-                print(info)
+    trainer = pl.Trainer(gpus=0)
+    trainer.fit(net, train_dataloaders=dataloader)

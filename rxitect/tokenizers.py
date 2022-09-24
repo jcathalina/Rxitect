@@ -1,13 +1,20 @@
 import re
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Dict, List
 
 import selfies as sf
 import torch
 
 
 class Tokenizer(ABC):
+    start_token: str
+    stop_token: str
+    pad_token: str
+
+    # Inferred attrs
     vocabulary_size_: int
+    tk2ix_: Dict[str, int]
+    ix2tk_: Dict[int, str]
 
     @abstractmethod
     def encode(self, molecules: List[str]) -> torch.Tensor:

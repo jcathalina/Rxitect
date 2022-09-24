@@ -9,4 +9,4 @@ def is_valid_smiles(smiles: str) -> bool:
 
 
 def filter_duplicate_tensors(x: torch.Tensor) -> torch.Tensor:
-    x.unique_consecutive(dim=0)
+    return x.unique_consecutive(dim=0)
