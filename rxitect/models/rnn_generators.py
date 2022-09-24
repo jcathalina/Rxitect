@@ -76,6 +76,7 @@ class LSTMGenerator(pl.LightningModule):
         )
         self.output_layer = nn.Linear(hidden_size, self.tokenizer.vocabulary_size_)
         self.lr = lr
+        self.weight_decay = weight_decay
 
     def forward(
         self, x: torch.Tensor, h: torch.Tensor
@@ -230,5 +231,5 @@ if __name__ == "__main__":
     )
     dataloader = smiles_dataloader(net.tokenizer)
 
-    trainer = pl.Trainer(gpus=0)
+    trainer = pl.Trainer(gpus=0, max_epochs=epochs)
     trainer.fit(net, train_dataloaders=dataloader)
