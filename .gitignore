@@ -188,6 +188,7 @@ models/*
 # Logs
 logs/*
 !logs/.gitkeep
+lightning_logs/
 
 # Active Learning Dump
 *_iter_*

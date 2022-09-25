@@ -1,4 +1,5 @@
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
 from rxitect.tokenizers import SelfiesTokenizer, SmilesTokenizer
@@ -7,6 +8,7 @@ from rxitect.tokenizers import SelfiesTokenizer, SmilesTokenizer
 class SmilesDataset(Dataset):
     def __init__(self, dataset_filepath: str, tokenizer: SmilesTokenizer) -> None:
         self.tokenizer = tokenizer
+        self.padding_value = tokenizer.tk2ix_[tokenizer.pad_token]
         with open(dataset_filepath, "r") as f:
             self.smiles = [line.split()[0] for line in f]
 

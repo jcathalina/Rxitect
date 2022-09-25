@@ -32,28 +32,28 @@ class Tokenizer(ABC):
 
 
 class SmilesTokenizer(Tokenizer):
-    def __init__(self, vocabulary_filepath: str, max_len: int) -> None:
+    def __init__(self, vocabulary_filepath: str) -> None:
+        self.pad_token = "<pad>"
         self.start_token = "GO"
         self.stop_token = "EOS"
-        self.pad_token = " "
-        SENTINEL_TOKENS = [self.start_token, self.stop_token, self.pad_token]
+        SENTINEL_TOKENS = [self.pad_token, self.start_token, self.stop_token]
         self.vocabulary = SENTINEL_TOKENS + self._get_vocabulary_from_file(
             vocabulary_filepath
         )
-        self.max_len = max_len
         self.vocabulary_size_ = len(self.vocabulary)
         self.tk2ix_ = dict(zip(self.vocabulary, range(self.vocabulary_size_)))
         self.ix2tk_ = {ix: tk for tk, ix in self.tk2ix_.items()}
 
     def encode(self, molecule: str) -> torch.Tensor:
-        encoded_smiles = torch.zeros(self.max_len, dtype=torch.long)
         tokenized_smiles = self._tokenize(molecule)
+        encoded_smiles = torch.zeros(len(tokenized_smiles), dtype=torch.long)
         for i, token in enumerate(tokenized_smiles):
             encoded_smiles[i] = self.tk2ix_[token]
         return encoded_smiles
 
     def batch_encode(self, molecules: List[str]) -> torch.Tensor:
-        encoded_smiles = torch.zeros(len(molecules), self.max_len, dtype=torch.long)
+        max_len = max([len(mol) for mol in molecules])
+        encoded_smiles = torch.zeros(len(molecules), max_len, dtype=torch.long)
         for i, smi in enumerate(molecules):
             tokenized_smi = self._tokenize(smi)
             for j, token in enumerate(tokenized_smi):

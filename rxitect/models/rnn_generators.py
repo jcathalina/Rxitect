@@ -1,11 +1,11 @@
 from typing import Tuple
 
-import torch
 import pytorch_lightning as pl
+import torch
 import torch.nn as nn
 
-from rxitect.tokenizers import get_tokenizer
 from rxitect import utils
+from rxitect.tokenizers import get_tokenizer
 
 
 class LSTMGenerator(pl.LightningModule):
@@ -33,7 +33,6 @@ class LSTMGenerator(pl.LightningModule):
         self,
         vocabulary_filepath: str,
         molecule_repr: str = "smiles",
-        max_output_len: int = 100,
         embedding_size: int = 128,
         hidden_size: int = 512,
         num_layers: int = 3,
@@ -47,8 +46,6 @@ class LSTMGenerator(pl.LightningModule):
             TODO
         molecule_repr : str, optional
             The type of molecular (string) representation to use (default is "smiles")
-        max_output_len : int, optional
-            TODO
         embedding_size : int, optional
             The size of the embedding layer (default is 128)
         hidden_size : int, optional
@@ -61,16 +58,17 @@ class LSTMGenerator(pl.LightningModule):
             TODO
         """
         super().__init__()
+        self.save_hyperparameters()
         self.tokenizer = get_tokenizer(
             molecule_repr,
             vocabulary_filepath=vocabulary_filepath,
-            max_len=max_output_len,
         )
         self.embedding_size = embedding_size
         self.hidden_size = hidden_size
         self.embedding_layer = nn.Embedding(
             num_embeddings=self.tokenizer.vocabulary_size_, embedding_dim=embedding_size
         )
+        self.num_layers = num_layers
         self.lstm = nn.LSTM(
             embedding_size, hidden_size, num_layers=num_layers, batch_first=True
         )
@@ -89,29 +87,45 @@ class LSTMGenerator(pl.LightningModule):
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
         loss = self.likelihood(batch)
         loss = -loss.mean()
-        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "train/loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
         return loss
 
-    def validation_step(self, batch: torch.Tensor, batch_idx: torch.Tensor) -> torch.Tensor:
+    def validation_step(
+        self, batch: torch.Tensor, batch_idx: torch.Tensor
+    ) -> torch.Tensor:
         loss = self.likelihood(batch)
         loss = -loss.mean()
-        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "val/loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
         return loss
 
     def on_validation_epoch_end(self) -> None:
         sequences = self.sample(1024)
         sequences = utils.filter_duplicate_tensors(sequences)
-        valid_arr = [utils.is_valid_smiles(smi) for smi in self.tokenizer.batch_decode(sequences)]
+        valid_arr = [
+            utils.is_valid_smiles(smi) for smi in self.tokenizer.batch_decode(sequences)
+        ]
         frac_valid = sum(valid_arr) / len(valid_arr)
+        frac_unique = sum(valid_arr) / 1024
         self.log("frac_valid_smiles", frac_valid)
+        self.log("frac_unique_smiles", frac_unique)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        optimizer = torch.optim.Adam(
+            self.parameters(), lr=self.lr, weight_decay=self.weight_decay
+        )
         return optimizer
 
     def init_hidden(self, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        h = torch.rand(3, batch_size, self.hidden_size, device=self.device)
-        c = torch.rand(3, batch_size, self.hidden_size, device=self.device)
+        h = torch.rand(
+            self.num_layers, batch_size, self.hidden_size, device=self.device
+        )
+        c = torch.rand(
+            self.num_layers, batch_size, self.hidden_size, device=self.device
+        )
         return h, c
 
     def likelihood(self, target: torch.Tensor) -> torch.Tensor:
@@ -126,7 +140,6 @@ class LSTMGenerator(pl.LightningModule):
         for step in range(seq_len):
             logits, h = self(x, h)
             logits = logits.log_softmax(dim=-1)
-            dummy_idx = target[:, step : step + 1]
             score = logits.gather(1, target[:, step : step + 1]).squeeze()
             scores[:, step] = score
             x = target[:, step]
@@ -159,77 +172,41 @@ class LSTMGenerator(pl.LightningModule):
 
 
 class GRUGenerator(nn.Module):
-    """
-    A molecule generator that uses an LSTM to learn how to build valid molecular representations
-    through BPTT.
-
-    Attributes
-    ----------
-    tokenizer : Tokenizer
-        A tokenizer to handle a given molecular representation (e.g., SMILES or SELFIES).
-
-    """
-
-    def __init__(
-        self,
-        molecule_repr: str = "smiles",
-        embedding_size: int = 128,
-        hidden_size: int = 512,
-    ) -> None:
-        """
-        Parameters
-        ----------
-        molecule_repr : str
-            The type of molecular (string) representation to use (e.g. "smiles")
-        embedding_size : int, optional
-            The size of the embedding layer (default is 128)
-        hidden_size: int, optional
-            The sie of the hidden layer (default is 512)
-        """
-        super().__init__()
-        self.tokenizer = get_tokenizer(molecule_repr)
-        self.embedding_size = embedding_size
-        self.embedding_layer = nn.Embedding(
-            num_embeddings=self.tokenizer.vocabulary_size_, embedding_dim=embedding_size
-        )
+    pass
 
 
 if __name__ == "__main__":
     import torch
     import torch.nn as nn
     from pyprojroot import here
+    from pytorch_lightning.profilers import AdvancedProfiler
     from torch import optim
     from torch.utils.data import DataLoader
 
-    from rxitect.data import SelfiesDataset, SmilesDataset
+    from rxitect.data import SelfiesDataset, SmilesDataModule, SmilesDataset
     from rxitect.models import LSTMGenerator
     from rxitect.tokenizers import (SelfiesTokenizer, SmilesTokenizer,
                                     get_tokenizer)
 
-    def smiles_dataloader(smiles_tokenizer) -> DataLoader:
-        test_dataset_filepath = here() / "tests/data/test.smi"
-        # test_dataset_filepath = here() / "data/processed/chembl_v30_clean.smi"
-        dataset = SmilesDataset(
-            dataset_filepath=test_dataset_filepath, tokenizer=smiles_tokenizer
-        )
-        dataloader = DataLoader(
-            dataset=dataset,
-            batch_size=128,
-            num_workers=4,
-            shuffle=True,
-            pin_memory=True,
-            collate_fn=SmilesDataset.collate_fn,
-        )
-        return dataloader
-
     lr = 1e-3
-    epochs = 5
+    epochs = 6
 
     net = LSTMGenerator(
         vocabulary_filepath=here() / "tests/data/test_smiles_voc.txt",
-        max_output_len=200,
+        max_sequence_length=140,
     )
-    dataloader = smiles_dataloader(net.tokenizer)
+    dm = SmilesDataModule(
+        dataset_filepath=here() / "data/processed/chembl_v30_clean.smi",
+        tokenizer=net.tokenizer,
+        num_workers=4,
+    )
 
-    trainer = pl.Trainer(gpus=0, max_epochs=epochs)
-    trainer.fit(net, train_dataloaders=dataloader)
+    profiler = AdvancedProfiler(dirpath=here() / "logs", filename="perf_logs")
+    trainer = pl.Trainer(
+        accelerator="gpu",
+        devices=1,
+        max_epochs=epochs,
+        profiler=profiler,
+        check_val_every_n_epoch=1,
+    )
+    trainer.fit(net, datamodule=dm)
