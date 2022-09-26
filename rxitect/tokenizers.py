@@ -164,13 +164,13 @@ class SelfiesTokenizer(Tokenizer):
 
 
 def get_tokenizer(
-    molecule_repr: str, vocabulary_filepath: str, max_len: int
+    molecule_repr: str, vocabulary_filepath: str
 ) -> Tokenizer:
     if molecule_repr == "smiles":
-        return SmilesTokenizer(vocabulary_filepath=vocabulary_filepath, max_len=max_len)
+        return SmilesTokenizer(vocabulary_filepath=vocabulary_filepath)
     elif molecule_repr == "selfies":
         return SelfiesTokenizer(
-            vocabulary_filepath=vocabulary_filepath, max_len=max_len
+            vocabulary_filepath=vocabulary_filepath
         )
     else:
         raise ValueError(molecule_repr)

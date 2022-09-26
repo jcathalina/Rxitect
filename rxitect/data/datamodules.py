@@ -7,7 +7,7 @@ from pytorch_lightning.utilities.types import (EVAL_DATALOADERS,
                                                TRAIN_DATALOADERS)
 from torch.utils.data import DataLoader, random_split
 
-from rxitect.data import SmilesDataset
+from rxitect.data.datasets import SmilesDataset
 from rxitect.tokenizers import SmilesTokenizer
 
 logger = logging.getLogger(__name__)
