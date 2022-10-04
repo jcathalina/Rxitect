@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from itertools import count
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -13,9 +13,9 @@ from rxitect.algorithms.gfn_algorithm import GFNAlgorithm
 
 if TYPE_CHECKING:
     from rxitect.algorithms.gfn_algorithm import SamplingModel
-    from rxitect.envs import FragmentEnvContext
+    from rxitect.envs import FragmentEnvContext, FragmentEnv
     from rxitect.envs.contexts import (ActionCategorical, ActionIndex,
-                                       ActionType, GraphEnvContext)
+                                       ActionType, Action, Graph)
 
 
 class TrajectoryBalance(GFNAlgorithm):
@@ -23,8 +23,8 @@ class TrajectoryBalance(GFNAlgorithm):
 
     def __init__(
         self,
-        env: FragmentEnvContext,
-        ctx: GraphEnvContext,
+        env: FragmentEnv,
+        ctx: FragmentEnvContext,
         rng: np.random.RandomState,
         hps: Dict[str, Any],
         max_len=None,
@@ -42,9 +42,9 @@ class TrajectoryBalance(GFNAlgorithm):
         reward_loss_multiplier: float, multiplying constant for the bootstrap loss.
         Parameters
         ----------
-        env: FragmentEnvContext
+        env: FragmentEnv
             A graph environment.
-        ctx: GraphEnvContext
+        ctx: FragmentEnvContext
             A context.
         rng: np.random.RandomState
             rng used to take random actions
@@ -103,7 +103,7 @@ class TrajectoryBalance(GFNAlgorithm):
         env = self.env
         dev = self.ctx.device
         cond_info = cond_info.to(dev)
-        logZ_pred = model.logZ(cond_info)
+        log_z_pred = model.logZ(cond_info)
         # This will be returned as training data
         data = [{"traj": [], "reward_pred": None, "is_valid": True} for _ in range(n)]
         # Let's also keep track of trajectory statistics according to the model
@@ -196,14 +196,14 @@ class TrajectoryBalance(GFNAlgorithm):
             # If we're not bootstrapping, we could query the reward
             # model here, but this is expensive/impractical.
             # Instead, just report forward and backward flows
-            data[i]["logZ"] = logZ_pred[i].item()
+            data[i]["logZ"] = log_z_pred[i].item()
             data[i]["fwd_logprob"] = sum(fwd_logprob[i])
             data[i]["bck_logprob"] = sum(bck_logprob[i])
             if self.bootstrap_own_reward and False:  # TODO: verify
                 if not data[i]["is_valid"]:
                     logprob_of_illegal.append(data[i]["fwd_logprob"].item())
                 # If we are bootstrapping, we can report the theoretical loss as well
-                numerator = data[i]["fwd_logprob"] + logZ_pred[i]
+                numerator = data[i]["fwd_logprob"] + log_z_pred[i]
                 denominator = data[i]["bck_logprob"] + data[i]["reward_pred"].log()
                 if self.epsilon is not None:
                     numerator = torch.logaddexp(numerator, epsilon)
@@ -211,7 +211,7 @@ class TrajectoryBalance(GFNAlgorithm):
                 data[i]["loss"] = (numerator - denominator).pow(2)
         return data
 
-    def construct_batch(self, trajs, cond_info, rewards):
+    def construct_batch(self, trajs: List[List[Tuple[Graph, Action]]], cond_info, rewards):
         """Construct a batch from a list of trajectories and their information
         Parameters
         ----------
@@ -227,10 +227,10 @@ class TrajectoryBalance(GFNAlgorithm):
              A (CPU) Batch object with relevant attributes added
         """
         torch_graphs = [
-            self.ctx.graph_to_Data(i[0]) for tj in trajs for i in tj["traj"]
+            self.ctx.graph_to_data(i[0]) for tj in trajs for i in tj["traj"]
         ]
         actions = [
-            self.ctx.GraphAction_to_aidx(g, a)
+            self.ctx.action_to_idx(g, a)
             for g, a in zip(torch_graphs, [i[1] for tj in trajs for i in tj["traj"]])
         ]
         num_backward = torch.tensor(
@@ -244,7 +244,7 @@ class TrajectoryBalance(GFNAlgorithm):
                 for i in range(len(tj["traj"]))
             ]
         )
-        batch = self.ctx.collate(torch_graphs)
+        batch = self.ctx.collate_fn(torch_graphs)
         batch.traj_lens = torch.tensor([len(i["traj"]) for i in trajs])
         batch.num_backward = num_backward
         batch.actions = torch.tensor(actions)
@@ -259,7 +259,7 @@ class TrajectoryBalance(GFNAlgorithm):
         """Compute the losses over trajectories contained in the batch
         Parameters
         ----------
-        model: TrajectoryBalanceModel
+        model: SamplingModel
             A GNN taking in a batch of graphs as input as per constructed by `self.construct_batch`.
             Must have a `logZ` attribute, itself a model, which predicts log of Z(cond_info)
         batch: Batch
@@ -288,7 +288,7 @@ class TrajectoryBalance(GFNAlgorithm):
         # i.e. the final graph of each trajectory
         log_reward_preds = log_reward_preds[final_graph_idx, 0]
         # Compute trajectory balance objective
-        Z = model.logZ(cond_info)[:, 0]
+        Z = model.log_z(cond_info)[:, 0]
         # This is the log prob of each action in the trajectory
         log_prob = fwd_cat.log_prob(batch.actions)
         # The log prob of each backward action
