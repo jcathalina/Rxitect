@@ -163,14 +163,10 @@ class SelfiesTokenizer(Tokenizer):
         return tokenized_selfies
 
 
-def get_tokenizer(
-    molecule_repr: str, vocabulary_filepath: str
-) -> Tokenizer:
+def get_tokenizer(molecule_repr: str, vocabulary_filepath: str) -> Tokenizer:
     if molecule_repr == "smiles":
         return SmilesTokenizer(vocabulary_filepath=vocabulary_filepath)
     elif molecule_repr == "selfies":
-        return SelfiesTokenizer(
-            vocabulary_filepath=vocabulary_filepath
-        )
+        return SelfiesTokenizer(vocabulary_filepath=vocabulary_filepath)
     else:
         raise ValueError(molecule_repr)

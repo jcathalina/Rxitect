@@ -1,9 +1,10 @@
 import pytorch_lightning as pl
-
-from rxitect.models import LSTMGenerator
-from rxitect.data import SmilesDataModule
-from pytorch_lightning.profilers import AdvancedProfiler
 from pyprojroot import here
+from pytorch_lightning.profilers import AdvancedProfiler
+
+from rxitect.data import SmilesDataModule
+from rxitect.models import LSTMGenerator
+
 # from pytorch_lightning.cli import LightningCLI
 
 
