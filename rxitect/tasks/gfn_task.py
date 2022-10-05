@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, NewType, Tuple, Union
 
 import torch
 from rdkit.Chem.rdchem import Mol
 from torch import nn
 
 # This type represents an unprocessed list of reward signals/conditioning information
-FlatRewards = NewType("FlatRewards", Tensor)  # type: ignore
+FlatRewards = NewType("FlatRewards", torch.Tensor)  # type: ignore
 
 # This type represents the outcome for a multi-objective task of
 # converting FlatRewards to a scalar, e.g. (sum R_i omega_i) ** beta
-ScalarReward = NewType("ScalarReward", Tensor)  # type: ignore
+ScalarReward = NewType("ScalarReward", torch.Tensor)  # type: ignore
 
 
 class GFNTask(ABC):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple
 
 import torch
@@ -8,11 +9,17 @@ from rdkit.Chem.rdchem import Mol
 from torch import nn
 from torch.types import Device
 from torch.utils.data import DataLoader, Dataset
+from torch.utils.tensorboard.writer import SummaryWriter
 from torch_geometric.data import Batch
 
-from rxitect.algorithms.gfn_algorithm import GFNAlgorithm
-from rxitect.envs.contexts import ActionCategorical, GraphEnvContext
-from rxitect.tasks.gfn_task import GFNTask
+from rxitect.data.iterators import SamplingIterator
+from rxitect.envs.contexts import ActionCategorical
+from rxitect.utils.multiprocessing_proxy import wrap_model_mp
+
+if TYPE_CHECKING:
+    from rxitect.algorithms.gfn_algorithm import GFNAlgorithm
+    from rxitect.envs.contexts import GraphEnvContext
+    from rxitect.tasks.gfn_task import GFNTask
 
 
 class GFNTrainer:
@@ -83,7 +90,7 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
-            ratio=self.offline_ratio,
+            offline_ratio=self.offline_ratio,
             log_dir=self.hps["log_dir"],
         )
         for hook in self.sampling_hooks:
@@ -105,7 +112,7 @@ class GFNTrainer:
             self.algo,
             self.task,
             dev,
-            ratio=self.valid_offline_ratio,
+            offline_ratio=self.valid_offline_ratio,
             stream=False,
         )
         return torch.utils.data.DataLoader(
@@ -152,9 +159,9 @@ class GFNTrainer:
             self.log(info, it, "train")
 
             if it % self.hps["validate_every"] == 0:
-                for batch in valid_dl:
+                for val_batch in valid_dl:
                     info = self.evaluate_batch(
-                        batch.to(self.device), epoch_idx, batch_idx
+                        val_batch.to(self.device), epoch_idx, batch_idx
                     )
                     self.log(info, it, "valid")
                 torch.save(
@@ -162,13 +169,11 @@ class GFNTrainer:
                         "models_state_dict": [self.model.state_dict()],
                         "hps": self.hps,
                     },
-                    open(pathlib.Path(self.hps["log_dir"]) / "model_state.pt", "wb"),
+                    open(Path(self.hps["log_dir"]) / "model_state.pt", "wb"),
                 )
 
     def log(self, info, index, key):
         if not hasattr(self, "_summary_writer"):
-            self._summary_writer = torch.utils.tensorboard.SummaryWriter(
-                self.hps["log_dir"]
-            )
+            self._summary_writer = SummaryWriter(self.hps["log_dir"])
         for k, v in info.items():
             self._summary_writer.add_scalar(f"{key}_{k}", v, index)

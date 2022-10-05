@@ -2,20 +2,20 @@ from __future__ import annotations
 
 import copy
 from itertools import count
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import numpy as np
 import torch
 from torch_geometric.data import Batch
 from torch_scatter import scatter
 
-from rxitect.algorithms.gfn_algorithm import GFNAlgorithm
+from rxitect.algorithms.gfn_algorithm import GFNAlgorithm, Trajectory
+from rxitect.envs.contexts import ActionType
 
 if TYPE_CHECKING:
     from rxitect.algorithms.gfn_algorithm import SamplingModel
-    from rxitect.envs import FragmentEnvContext, FragmentEnv
-    from rxitect.envs.contexts import (ActionCategorical, ActionIndex,
-                                       ActionType, Action, Graph)
+    from rxitect.envs import FragmentEnv, FragmentEnvContext
+    from rxitect.envs.contexts import ActionCategorical, ActionIndex
 
 
 class TrajectoryBalance(GFNAlgorithm):
@@ -103,7 +103,7 @@ class TrajectoryBalance(GFNAlgorithm):
         env = self.env
         dev = self.ctx.device
         cond_info = cond_info.to(dev)
-        log_z_pred = model.logZ(cond_info)
+        log_z_pred = model.log_z(cond_info)
         # This will be returned as training data
         data = [{"traj": [], "reward_pred": None, "is_valid": True} for _ in range(n)]
         # Let's also keep track of trajectory statistics according to the model
@@ -134,7 +134,7 @@ class TrajectoryBalance(GFNAlgorithm):
             # Construct graphs for the trajectories that aren't yet done
             torch_graphs = [ctx.graph_to_data(i) for i in not_done(graphs)]
             not_done_mask = torch.tensor(done, device=dev).logical_not()
-            # Forward pass to get GraphActionCategorical
+            # Forward pass to get ActionCategorical
             fwd_cat, log_reward_preds = model(
                 ctx.collate_fn(torch_graphs).to(dev), cond_info[not_done_mask]
             )
@@ -148,7 +148,7 @@ class TrajectoryBalance(GFNAlgorithm):
             graph_actions = [
                 ctx.idx_to_action(g, a) for g, a in zip(torch_graphs, actions)
             ]
-            log_probs = fwd_cat.log_prob(actions)
+            log_probs = fwd_cat.log_probability(actions)
             for i, j in zip(not_done(range(n)), range(n)):
                 # Step each trajectory, and accumulate statistics
                 fwd_logprob[i].append(log_probs[j].unsqueeze(0))
@@ -211,11 +211,11 @@ class TrajectoryBalance(GFNAlgorithm):
                 data[i]["loss"] = (numerator - denominator).pow(2)
         return data
 
-    def construct_batch(self, trajs: List[List[Tuple[Graph, Action]]], cond_info, rewards):
+    def construct_batch(self, trajs: List[Trajectory], cond_info, rewards):
         """Construct a batch from a list of trajectories and their information
         Parameters
         ----------
-        trajs: List[List[tuple[Graph, GraphAction]]]
+        trajs: List[Trajectory]
             A list of N trajectories.
         cond_info: Tensor
             The conditional info that is considered for each trajectory. Shape (N, n_info)
@@ -290,7 +290,7 @@ class TrajectoryBalance(GFNAlgorithm):
         # Compute trajectory balance objective
         Z = model.log_z(cond_info)[:, 0]
         # This is the log prob of each action in the trajectory
-        log_prob = fwd_cat.log_prob(batch.actions)
+        log_prob = fwd_cat.log_probability(batch.actions)
         # The log prob of each backward action
         log_p_B = (1 / batch.num_backward).log()
         # Take log rewards, and clip

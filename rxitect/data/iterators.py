@@ -34,7 +34,7 @@ class SamplingIterator(IterableDataset):
         algo: GFNAlgorithm,
         task: GFNTask,
         device: Device,
-        offline_ratio: bool = 0.5,
+        offline_ratio: float = 0.5,
         stream: bool = True,
         log_dir: Optional[str] = None,
     ):

@@ -14,6 +14,7 @@ class GraphTransformer(nn.Module):
     This graph model takes in node features, edge features, and graph features (referred to as
     conditional information, since they condition the output). The graph features are projected to
     virtual nodes (one per graph), which are fully connected.
+
     The per node outputs are the concatenation of the final (post graph-convolution) node embeddings
     and of the final virtual node embedding of the graph each node corresponds to.
     The per graph outputs are the concatenation of a global mean pooling operation, of the final
