@@ -196,7 +196,7 @@ class TrajectoryBalance(GFNAlgorithm):
             # If we're not bootstrapping, we could query the reward
             # model here, but this is expensive/impractical.
             # Instead, just report forward and backward flows
-            data[i]["logZ"] = log_z_pred[i].item()
+            data[i]["log_z"] = log_z_pred[i].item()
             data[i]["fwd_logprob"] = sum(fwd_logprob[i])
             data[i]["bck_logprob"] = sum(bck_logprob[i])
             if self.bootstrap_own_reward and False:  # TODO: verify
@@ -372,7 +372,7 @@ class TrajectoryBalance(GFNAlgorithm):
             / (invalid_mask.sum() + 1e-4),
             "invalid_losses": (invalid_mask * traj_losses).sum()
             / (invalid_mask.sum() + 1e-4),
-            "logZ": Z.mean(),
+            "log_z": Z.mean(),
         }
 
         if not torch.isfinite(traj_losses).all():

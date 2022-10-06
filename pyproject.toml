@@ -5,8 +5,7 @@ description = "Code for Julius Cathalina's M.Sc. Thesis"
 authors = ["Julius Cathalina <j.e.j.cathalina@vuw.leidenuniv.nl>"]
 
 [tool.poetry.dependencies]
-python = "3.8"
-ray = "^1.13.0"
+python = "^3.9"
 seaborn = "^0.11.2"
 hydra-core = "^1.2.0"
 hydra-colorlog = "^1.2.0"
@@ -28,4 +27,3 @@ Sphinx = "^5.1.1"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
