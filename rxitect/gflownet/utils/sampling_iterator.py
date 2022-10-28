@@ -13,6 +13,7 @@ from torch.utils.data import IterableDataset
 from rxitect.gflownet.algorithms.interfaces.graph_algorithm import IGraphAlgorithm
 from rxitect.gflownet.contexts.interfaces.graph_context import IGraphContext
 from rxitect.gflownet.tasks.interfaces.graph_task import IGraphTask
+from rxitect.gflownet.utils.types import FlatRewards
 
 
 class SamplingIterator(IterableDataset):
@@ -66,7 +67,7 @@ class SamplingIterator(IterableDataset):
         self.sample_cond_info = sample_cond_info
         if not sample_cond_info:
             # Slightly weird semantics, but if we're sampling x given some fixed (data) cond info
-            # then "offline" refers to cond info and online to x, so no duplication and we don't end
+            # then "offline" refers to cond info and online to x, so no duplication, and we don't end
             # up with 2*batch_size accidentally
             self.offline_batch_size = self.online_batch_size = batch_size
         self.log_dir = log_dir if self.offline_ratio < 1 and self.stream else None
@@ -180,7 +181,7 @@ class SamplingIterator(IterableDataset):
                         trajs[num_offline + i]['is_valid'] = is_valid[num_offline + i].item()
                     for i, m in zip(valid_idcs, valid_mols):
                         trajs[i]['smi'] = Chem.MolToSmiles(m)
-            flat_rewards = torch.stack(flat_rewards)
+            flat_rewards = FlatRewards(torch.stack(flat_rewards))
             # Compute scalar rewards from conditional information & flat rewards
             rewards = self.task.cond_info_to_reward(cond_info, flat_rewards)
             rewards[torch.logical_not(is_valid)] = np.exp(self.algo.illegal_action_logreward)

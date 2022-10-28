@@ -191,3 +191,6 @@ notebooks/Untitled*.ipynb
 # Logs
 logs/*
 !logs/.gitkeep
+
+# Scratch logs
+rxitect/gflownet/tasks/scratch/

@@ -74,12 +74,21 @@ class GraphSampler:
         def not_done(lst):
             return [e for i, e in enumerate(lst) if not done[i]]
 
-        for t in range(self.max_len):
+        for t in range(self.max_nodes):
             # Construct graphs for the trajectories that aren't yet done
             torch_graphs = [self.ctx.graph_to_Data(i) for i in not_done(graphs)]
             not_done_mask = torch.tensor(done, device=device).logical_not()
             # Forward pass to get GraphActionCategorical
             fwd_cat, log_reward_preds = model(self.ctx.collate(torch_graphs).to(device), cond_info[not_done_mask])
+
+            # FIXME: Experimental avoidance of early stop
+            if t < 2:
+                def _mask(x, m):
+                    # mask logit vector x with binary mask m, -1000 is a tiny log-value
+                    return x * m + -1000 * (1 - m)
+                fwd_cat.logits[0] = _mask(fwd_cat.logits[0].detach().cpu(), torch.tensor([0.])).cuda()
+            #
+
             if self.random_action_prob > 0:
                 masks = [1] * len(fwd_cat.logits) if fwd_cat.masks is None else fwd_cat.masks
                 # Device which graphs in the minibatch will get their action randomized
@@ -108,7 +117,7 @@ class GraphSampler:
                 data[i]['traj'].append((graphs[i], graph_actions[j]))
                 # Check if we're done
                 # FIXME: Currently, stop action is allowed even for empty graphs, this is unreasonable.
-                if graph_actions[j].action is GraphActionType.Stop or t == self.max_len - 1:
+                if graph_actions[j].action is GraphActionType.Stop or t == self.max_nodes - 1:
                     done[i] = True
                     if self.sanitize_samples and not self.ctx.is_sane(graphs[i]):
                         # check if the graph is sane (e.g. RDKit can

@@ -129,7 +129,7 @@ class FragBasedGraphContext(IGraphContext):
 
         Returns
         -------
-        data:  gd.Data
+        data:  Data
             The corresponding torch_geometric object.
         """
         x = torch.zeros((max(1, len(g.nodes)), self.num_node_dim))
@@ -140,7 +140,6 @@ class FragBasedGraphContext(IGraphContext):
         set_edge_attr_mask = torch.zeros((len(g.edges), self.num_edge_attr_logits))
         for i, e in enumerate(g.edges):
             ad = g.edges[e]
-            a, b = e
             for n, offset in zip(e, [0, self.num_stem_acts]):
                 idx = ad.get(f'{int(n)}_attach', 0) + offset
                 edge_attr[i * 2, idx] = 1
@@ -161,12 +160,12 @@ class FragBasedGraphContext(IGraphContext):
 
         Parameters
         ----------
-        graphs: List[gd.Data]
+        graphs:
             A list of gd.Data objects (e.g. given by graph_to_Data).
 
         Returns
         -------
-        batch: gd.Batch
+        batch: Batch
             A torch_geometric Batch object
         """
         return Batch.from_data_list(graphs, follow_batch=['edge_index'])
@@ -202,8 +201,18 @@ class FragBasedGraphContext(IGraphContext):
             # try:
             afrag = g.nodes[a]['v']
             bfrag = g.nodes[b]['v']
-            u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
-                    int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
+            # u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
+            #         int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
+            if self.frags_stems[afrag]:
+                u = int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a])
+            else:
+                u = int(offsets[a])
+
+            if self.frags_stems[bfrag]:
+                v = int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b])
+            else:
+                v = int(offsets[b])
+
             bond_atoms += [u, v]
             # except IndexError:
             #     print(f"Index that caused the error: a={a} OR b={b} -- edges: {g.edges}, #edges: {len(g.edges)}")
@@ -221,21 +230,19 @@ class FragBasedGraphContext(IGraphContext):
 
         for bond_atom in bond_atoms:
             _pop_H(bond_atom)
-        # list(map(_pop_H, bond_atoms))
-        Chem.SanitizeMol(mol)
+
+        # Chem.SanitizeMol(mol)
         return mol
 
     def is_sane(self, g: Graph) -> bool:
         """Verifies whether the given Graph is valid according to RDKit"""
         try:
             mol = self.graph_to_mol(g)
-            smiles = Chem.MolToSmiles(mol)
-            # assert Chem.MolFromSmiles(Chem.MolToSmiles(mol)) is not None
         # FIXME: I mean, this catch-all exception works but training is very unstable with all of these invalid
         #   options. This catches (1) Empty graphs, (2) Unkekulizable mols (3) Valence greater than permitted
         #   (4) List index out of range for when a fragment with no stems is picked
         except Exception as e:
-            print(f"The following exception occurred during sanity check: {e}")
+            # print(f"The following exception occurred during sanity check: {e}")
             return False
         if mol is None:
             return False

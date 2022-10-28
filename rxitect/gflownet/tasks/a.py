@@ -119,7 +119,7 @@ class SEHFragTrainer(BaseTrainer):
 
 class SEHMOOTask(IGraphTask):
     """Sets up a multiobjective task where the rewards are (functions of):
-    - the the binding energy of a molecule to Soluble Epoxide Hydrolases.
+    - the binding energy of a molecule to Soluble Epoxide Hydrolases.
     - its QED
     - its synthetic accessibility
     - its molecular weight
@@ -316,8 +316,8 @@ def main():
         'lr_decay': 10_000,
         'log_dir': 'scratch/logs/seh_frag_moo/run_tmp/',
         'num_training_steps': 20_000,
-        'validate_every': 5,
-        'sampling_tau': 0.95,
+        'validate_every': 500,
+        'sampling_tau': 0.0,
         'num_layers': 6,
         'num_data_loader_workers': 0,
         'temperature_dist_params': '(1, 192)',
