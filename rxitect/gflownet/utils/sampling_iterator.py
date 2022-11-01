@@ -250,14 +250,14 @@ class SQLiteLog:
         self.db = sqlite3.connect(db_path, timeout=self.timeout)
         cur = self.db.cursor()
         self._has_results_table = len(
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='results'").fetchall())
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='results2'").fetchall())
         cur.close()
 
     def _make_results_table(self, types, names):
         type_map = {str: 'text', float: 'real', int: 'real'}
         col_str = ', '.join(f'{name} {type_map[t]}' for t, name in zip(types, names))
         cur = self.db.cursor()
-        cur.execute(f'create table results ({col_str})')
+        cur.execute(f'create table results2 ({col_str})')
         self._has_results_table = True
         cur.close()
 
@@ -265,6 +265,6 @@ class SQLiteLog:
         if not self._has_results_table:
             self._make_results_table([type(i) for i in rows[0]], column_names)
         cur = self.db.cursor()
-        cur.executemany(f'insert into results values ({",".join("?"*len(rows[0]))})', rows)  # nosec
+        cur.executemany(f'insert into results2 values ({",".join("?"*len(rows[0]))})', rows)  # nosec
         cur.close()
         self.db.commit()

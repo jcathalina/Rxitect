@@ -3,6 +3,7 @@ import copy
 from typing import Any, Callable, Dict, List, Tuple, Union
 
 import numpy as np
+from pyprojroot import here
 from rdkit import RDLogger
 from rdkit.Chem import Descriptors
 from rdkit.Chem import QED
@@ -13,19 +14,19 @@ from torch import Tensor
 from torch.distributions.dirichlet import Dirichlet
 import torch.nn as nn
 from torch.utils.data import Dataset
-import torch_geometric.data as gd
 
 from rxitect.gflownet.algorithms.trajectory_balance import TrajectoryBalance
 from rxitect.gflownet.base_trainer import BaseTrainer
 from rxitect.gflownet.contexts.envs.graph_building_env import GraphBuildingEnv
 from rxitect.gflownet.contexts.frag_graph_context import FragBasedGraphContext
 from rxitect.gflownet.hooks.multiobjective_hooks import MultiObjectiveStatsHook, TopKHook
-from rxitect.gflownet.models import bengio2021flow
 from rxitect.gflownet.models.frag_graph_gfn import FragBasedGraphGFN
 from rxitect.gflownet.tasks.interfaces.graph_task import IGraphTask
 from rxitect.gflownet.utils import metrics
 from rxitect.gflownet.utils.types import FlatRewards, RewardScalar
-from rxitect.scorers import sascore
+from rxitect.scorers import sascore, rascore
+from rxitect.scorers.a2ascore import Predictor
+from rxitect.scorers.rascore import load_rascore_model
 
 
 class SEHFragTrainer(BaseTrainer):
@@ -38,7 +39,7 @@ class SEHFragTrainer(BaseTrainer):
             'num_layers': 4,
             'tb_epsilon': None,
             'illegal_action_logreward': -75,
-            'reward_loss_multiplier': 1,
+            'reward_loss_multiplier': 10,
             'temperature_sample_dist': 'uniform',
             'temperature_dist_params': '(.5, 32)',
             'weight_decay': 1e-8,
@@ -83,8 +84,8 @@ class SEHFragTrainer(BaseTrainer):
         self.opt = torch.optim.Adam(non_Z_params, hps['learning_rate'], (hps['momentum'], 0.999),
                                     weight_decay=hps['weight_decay'], eps=hps['adam_eps'])
         self.opt_Z = torch.optim.Adam(Z_params, hps['learning_rate'], (0.9, 0.999))
-        self.lr_sched = torch.optim.lr_scheduler.LambdaLR(self.opt, lambda steps: 2**(-steps / hps['lr_decay']))
-        self.lr_sched_Z = torch.optim.lr_scheduler.LambdaLR(self.opt_Z, lambda steps: 2**(-steps / hps['Z_lr_decay']))
+        self.lr_sched = torch.optim.lr_scheduler.LambdaLR(self.opt, lambda steps: 2 ** (-steps / hps['lr_decay']))
+        self.lr_sched_Z = torch.optim.lr_scheduler.LambdaLR(self.opt_Z, lambda steps: 2 ** (-steps / hps['Z_lr_decay']))
 
         self.sampling_tau = hps['sampling_tau']
         if self.sampling_tau > 0:
@@ -126,6 +127,7 @@ class SEHMOOTask(IGraphTask):
 
     The proxy is pretrained, and obtained from the original GFlowNet paper, see `gflownet.models.bengio2021flow`.
     """
+
     def __init__(self, dataset: Dataset, temperature_distribution: str, temperature_parameters: Tuple[float],
                  wrap_model: Callable[[nn.Module], nn.Module] = None):
         self._wrap_model = wrap_model
@@ -144,9 +146,11 @@ class SEHMOOTask(IGraphTask):
         return rp
 
     def _load_task_models(self):
-        model = bengio2021flow.load_original_model()
+        model = load_rascore_model(ckpt_filepath=here() / "models/rascore_26102022.ckpt", device="cuda")
         model, self.device = self._wrap_model(model)
-        return {'seh': model}
+        a2a = Predictor(path=here() / "models/RF_REG_CHEMBL251.pkg")
+        a2a.model.n_jobs = 1
+        return {'rascore': model, 'a2a': a2a}
 
     def sample_conditional_information(self, n):
         beta = None
@@ -189,30 +193,41 @@ class SEHMOOTask(IGraphTask):
             else:
                 flat_reward = torch.tensor(flat_reward)
         scalar_reward = (flat_reward * cond_info['preferences']).sum(1)
-        return scalar_reward**cond_info['beta']
+        return scalar_reward ** cond_info['beta']
 
     def compute_flat_rewards(self, mols: List[RDMol]) -> Tuple[FlatRewards, Tensor]:
-        graphs = [bengio2021flow.mol2graph(i) for i in mols]
-        is_valid = torch.tensor([i is not None for i in graphs]).bool()
+        # graphs = [bengio2021flow.mol2graph(i) for i in mols]
+        # is_valid = torch.tensor([i is not None for i in graphs]).bool()
+
+        # batch = gd.Batch.from_data_list([i for i in graphs if i is not None])
+        # batch.to(self.device)
+        # seh_preds = self.models['seh'](batch).reshape((-1,)).clip(1e-4, 100).data.cpu() / 8
+        # seh_preds[seh_preds.isnan()] = 0
+        fcfps = torch.tensor(np.array([rascore.mol2fcfp(i) for i in mols]), dtype=torch.float, device=self.device)
+        enhanced_fps = Predictor.calc_fp(mols=mols)
+        is_valid = torch.tensor([i is not None for i in fcfps]).bool()
         if not is_valid.any():
             return FlatRewards(torch.zeros((0, 4))), is_valid
-        batch = gd.Batch.from_data_list([i for i in graphs if i is not None])
-        batch.to(self.device)
-        seh_preds = self.models['seh'](batch).reshape((-1,)).clip(1e-4, 100).data.cpu() / 8
-        seh_preds[seh_preds.isnan()] = 0
+        # fcfps.to(self.device)
+        rascore_preds = self.models['rascore'](fcfps)  # is already between 0-1, no need to normalize
+        rascore_preds = rascore_preds.reshape(-1).detach().cpu()
+        a2ascore_preds = self.models['a2a'](enhanced_fps)
+        a2ascore_preds = torch.from_numpy(a2ascore_preds.astype(np.float32))
 
         def safe(f, x, default):
             try:
                 return f(x)
-            except Exception:
+            except Exception as e:
+                print(f"The following exception occurred for function {f}: {e}. Return default.")
                 return default
 
         qeds = torch.tensor([safe(QED.qed, i, 0) for i, v in zip(mols, is_valid) if v.item()])
         sas = torch.tensor([safe(sascore.calculateScore, i, 10) for i, v in zip(mols, is_valid) if v.item()])
         sas = (10 - sas) / 9  # Turn into a [0-1] reward
-        molwts = torch.tensor([safe(Descriptors.MolWt, i, 1000) for i, v in zip(mols, is_valid) if v.item()])
-        molwts = ((300 - molwts) / 700 + 1).clip(0, 1)  # 1 until 300 then linear decay to 0 until 1000
-        flat_rewards = torch.stack([seh_preds, qeds, sas, molwts], 1)
+        a2as = a2ascore_preds / 9.0  # 95pth percentile for A2A pChEMBL values is 9, so most will be [0-1]
+        # molwts = torch.tensor([safe(Descriptors.MolWt, i, 1000) for i, v in zip(mols, is_valid) if v.item()])
+        # molwts = ((300 - molwts) / 700 + 1).clip(0, 1)  # 1 until 300 then linear decay to 0 until 1000
+        flat_rewards = torch.stack([rascore_preds, sas, qeds, a2as], 1)
         return FlatRewards(flat_rewards), is_valid
 
 
@@ -265,6 +280,7 @@ class SEHMOOFragTrainer(SEHFragTrainer):
 
     def build_callbacks(self):
         parent = self
+
         class TopKMetricCB:
             def on_validation_end(self, metrics: Dict[str, Any]):
                 top_k = parent._top_k_hook.finalize()
@@ -314,18 +330,18 @@ def main():
     """Example of how this model can be run outside Determined"""
     hps = {
         'lr_decay': 10_000,
-        'log_dir': 'scratch/logs/seh_frag_moo/run_tmp/',
-        'num_training_steps': 20_000,
-        'validate_every': 500,
-        'sampling_tau': 0.0,
+        'log_dir': str(here() / f'logs/moo/run_tmp/'),
+        'num_training_steps': 10_000,
+        'validate_every': 100,
+        'sampling_tau': 0.95,
         'num_layers': 6,
-        'num_data_loader_workers': 0,
+        'num_data_loader_workers': 4,
         'temperature_dist_params': '(1, 192)',
         'global_batch_size': 64,
         'algo': 'TB',
         'sql_alpha': 0.01,
         'seed': 0,
-        'preference_type': 'seeded_many',
+        'preference_type': 'dirichlet',
     }
     trial = SEHMOOFragTrainer(hps, torch.device('cuda'))
     trial.verbose = True

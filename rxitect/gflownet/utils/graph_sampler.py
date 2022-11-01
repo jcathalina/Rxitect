@@ -65,8 +65,8 @@ class GraphSampler:
         data = [{'traj': [], 'reward_pred': None, 'is_valid': True} for i in range(n)]
         # Let's also keep track of trajectory statistics according to the model
         zero = torch.tensor([0], device=device, dtype=torch.float)
-        fwd_logprob: List[List[torch.Tensor]] = [[] for i in range(n)]
-        bck_logprob: List[List[torch.Tensor]] = [[zero] for i in range(n)]  # zero in case there is a single invalid action
+        fwd_logprob: List[List[torch.Tensor]] = [[] for _ in range(n)]
+        bck_logprob: List[List[torch.Tensor]] = [[zero] for _ in range(n)]  # zero in case there is a single invalid action
 
         graphs = [self.env.new() for _ in range(n)]
         done = [False] * n
@@ -86,7 +86,7 @@ class GraphSampler:
                 def _mask(x, m):
                     # mask logit vector x with binary mask m, -1000 is a tiny log-value
                     return x * m + -1000 * (1 - m)
-                fwd_cat.logits[0] = _mask(fwd_cat.logits[0].detach().cpu(), torch.tensor([0.])).cuda()
+                fwd_cat.logits[0] = _mask(fwd_cat.logits[0].detach().cpu(), torch.tensor([0.]))#.cuda()
             #
 
             if self.random_action_prob > 0:

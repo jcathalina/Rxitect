@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 import numpy as np
+import pandas as pd
 import rdkit.Chem as Chem
 import torch
 from networkx import Graph
@@ -29,7 +30,11 @@ class FragBasedGraphContext(IGraphContext):
             The dimensionality of the observations' conditional information vector (if >0)
         """
         self.max_frags = max_frags
-        self.frags_smi = open(here() / 'data/bengio2021_fragments_72.txt', 'r').read().splitlines()
+        with open(here() / 'data/bengio2021_fragments_72.txt', 'r') as f:
+            self.frags_smi = f.read().splitlines()
+        df = pd.read_csv(here() / "data/bengio2021_fragments_72_manual_stems.csv")
+        # self.frags_smi = df["block_smi"].to_list()
+        # self.frags_stems = df["block_r"].apply(eval).to_list()
         self.frags_mol = [Chem.MolFromSmiles(i) for i in self.frags_smi]
         self.frags_stems = [[
             atom_idx for atom_idx in range(m.GetNumAtoms()) if m.GetAtomWithIdx(atom_idx).GetTotalNumHs() > 0
@@ -201,17 +206,17 @@ class FragBasedGraphContext(IGraphContext):
             # try:
             afrag = g.nodes[a]['v']
             bfrag = g.nodes[b]['v']
-            # u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
-            #         int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
-            if self.frags_stems[afrag]:
-                u = int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a])
-            else:
-                u = int(offsets[a])
-
-            if self.frags_stems[bfrag]:
-                v = int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b])
-            else:
-                v = int(offsets[b])
+            u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
+                    int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
+            # if self.frags_stems[afrag]:
+            #     u = int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a])
+            # else:
+            #     u = int(offsets[a])
+            #
+            # if self.frags_stems[bfrag]:
+            #     v = int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b])
+            # else:
+            #     v = int(offsets[b])
 
             bond_atoms += [u, v]
             # except IndexError:
@@ -221,6 +226,7 @@ class FragBasedGraphContext(IGraphContext):
             #     exit(0)
             mol.AddBond(u, v, Chem.BondType.SINGLE)
         mol = mol.GetMol()
+        # print(f"Current mol looks like this: {Chem.MolToSmiles(mol)}")
 
         def _pop_H(atom):
             atom = mol.GetAtomWithIdx(atom)
@@ -231,7 +237,7 @@ class FragBasedGraphContext(IGraphContext):
         for bond_atom in bond_atoms:
             _pop_H(bond_atom)
 
-        # Chem.SanitizeMol(mol)
+        Chem.SanitizeMol(mol)
         return mol
 
     def is_sane(self, g: Graph) -> bool:
