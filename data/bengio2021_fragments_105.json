@@ -1,5 +1,5 @@
 {
-    "block_name": {
+    "frag_name": {
         "0": "c1ccccc1_0",
         "1": "CO_0",
         "2": "CO_1",
@@ -106,7 +106,7 @@
         "103": "C[SH2+]_1",
         "104": "C1COCC[NH2+]1_4"
     },
-    "block_smi": {
+    "frag_smiles": {
         "0": "c1ccccc1",
         "1": "CO",
         "2": "CO",
@@ -213,7 +213,7 @@
         "103": "C[SH2+]",
         "104": "C1COCC[NH2+]1"
     },
-    "block_r": {
+    "frag_stems": {
         "0": [
             0,
             1,

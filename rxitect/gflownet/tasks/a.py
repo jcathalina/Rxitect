@@ -227,7 +227,8 @@ class SEHMOOTask(IGraphTask):
         a2as = a2ascore_preds / 9.0  # 95pth percentile for A2A pChEMBL values is 9, so most will be [0-1]
         # molwts = torch.tensor([safe(Descriptors.MolWt, i, 1000) for i, v in zip(mols, is_valid) if v.item()])
         # molwts = ((300 - molwts) / 700 + 1).clip(0, 1)  # 1 until 300 then linear decay to 0 until 1000
-        flat_rewards = torch.stack([rascore_preds, sas, qeds, a2as], 1)
+        # flat_rewards = torch.stack([rascore_preds, sas, qeds, a2as], 1)
+        flat_rewards = torch.stack([qeds, qeds, qeds, qeds], 1)
         return FlatRewards(flat_rewards), is_valid
 
 
@@ -336,12 +337,12 @@ def main():
         'sampling_tau': 0.95,
         'num_layers': 6,
         'num_data_loader_workers': 4,
-        'temperature_dist_params': '(1, 192)',
+        'temperature_dist_params': '(16, 16)',
         'global_batch_size': 64,
         'algo': 'TB',
         'sql_alpha': 0.01,
         'seed': 0,
-        'preference_type': 'dirichlet',
+        'preference_type': 'seeded_many',
     }
     trial = SEHMOOFragTrainer(hps, torch.device('cuda'))
     trial.verbose = True

@@ -92,6 +92,7 @@ class GraphTransformer(nn.Module):
             o = norm1(o + linear(trans(torch.cat([o, agg], 1), aug_edge_index, aug_e)), aug_batch)
             o = norm2(o + ff(o), aug_batch)
 
-        glob = torch.cat([gnn.global_mean_pool(o[:-c.shape[0]], g.batch), o[-c.shape[0]:], c], 1)
+        gmp = gnn.global_mean_pool(o[:-c.shape[0]], g.batch)
+        glob = torch.cat([gmp, o[-c.shape[0]:], c], 1)
         o_final = torch.cat([o[:-c.shape[0]], c[g.batch]], 1)
         return o_final, glob

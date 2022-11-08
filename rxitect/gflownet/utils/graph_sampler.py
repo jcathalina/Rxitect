@@ -74,6 +74,10 @@ class GraphSampler:
         def not_done(lst):
             return [e for i, e in enumerate(lst) if not done[i]]
 
+        def _mask(x, m):
+            # mask logit vector x with binary mask m, -1000 is a tiny log-value
+            return x * m + -1000 * (1 - m)
+
         for t in range(self.max_nodes):
             # Construct graphs for the trajectories that aren't yet done
             torch_graphs = [self.ctx.graph_to_Data(i) for i in not_done(graphs)]
@@ -83,11 +87,10 @@ class GraphSampler:
 
             # FIXME: Experimental avoidance of early stop
             if t < 2:
-                def _mask(x, m):
-                    # mask logit vector x with binary mask m, -1000 is a tiny log-value
-                    return x * m + -1000 * (1 - m)
-                fwd_cat.logits[0] = _mask(fwd_cat.logits[0].detach().cpu(), torch.tensor([0.]))#.cuda()
+                fwd_cat.logits[0] = _mask(fwd_cat.logits[0].detach().cpu(), torch.tensor([0.]))  # .cuda()
             #
+            # FIXME: We should check for validity on the sources, namely: a source should
+            #   NEVER be allowed to be used if it has used up all of its stems.
 
             if self.random_action_prob > 0:
                 masks = [1] * len(fwd_cat.logits) if fwd_cat.masks is None else fwd_cat.masks

@@ -1,5 +1,6 @@
 from typing import List, Tuple
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import rdkit.Chem as Chem
@@ -30,15 +31,10 @@ class FragBasedGraphContext(IGraphContext):
             The dimensionality of the observations' conditional information vector (if >0)
         """
         self.max_frags = max_frags
-        with open(here() / 'data/bengio2021_fragments_72.txt', 'r') as f:
-            self.frags_smi = f.read().splitlines()
-        df = pd.read_csv(here() / "data/bengio2021_fragments_72_manual_stems.csv")
-        # self.frags_smi = df["block_smi"].to_list()
-        # self.frags_stems = df["block_r"].apply(eval).to_list()
+        df = pd.read_json(here() / "data/bengio2021_fragments_105.json")
+        self.frags_smi = df["frag_smiles"].to_list()
+        self.frags_stems = df["frag_stems"].to_list()
         self.frags_mol = [Chem.MolFromSmiles(i) for i in self.frags_smi]
-        self.frags_stems = [[
-            atom_idx for atom_idx in range(m.GetNumAtoms()) if m.GetAtomWithIdx(atom_idx).GetTotalNumHs() > 0
-        ] for m in self.frags_mol]
         self.frags_num_atom = [m.GetNumAtoms() for m in self.frags_mol]
         self.num_stem_acts = most_stems = max(map(len, self.frags_stems))
         self.action_map = [(frag_idx, stem_idx)
@@ -156,7 +152,17 @@ class FragBasedGraphContext(IGraphContext):
         if x.shape[0] == self.max_frags:
             add_node_mask = torch.zeros((x.shape[0], 1))
         else:
+            # TODO: This is where we should be checking if nodes are still valid to be used as sources right?
             add_node_mask = torch.ones((x.shape[0], 1))
+            # ATTEMPT 1: MASK SOURCE NODES MAYBE
+            if len(g.nodes) > 1:
+                for i, n in enumerate(g.nodes):
+                    node = g.nodes[n]
+                    curr_frag_idx = node['v']
+                    if g.degree(i) == len(self.frags_stems[curr_frag_idx]):
+                        add_node_mask[i] = 0
+                    if g.degree(i) > len(self.frags_stems[curr_frag_idx]):  # TODO: Grab stems from value of node
+                        print("What the fuck man.")
 
         return Data(x, edge_index, edge_attr, add_node_mask=add_node_mask, set_edge_attr_mask=set_edge_attr_mask)
 
@@ -226,6 +232,7 @@ class FragBasedGraphContext(IGraphContext):
             #     exit(0)
             mol.AddBond(u, v, Chem.BondType.SINGLE)
         mol = mol.GetMol()
+
         # print(f"Current mol looks like this: {Chem.MolToSmiles(mol)}")
 
         def _pop_H(atom):
@@ -237,6 +244,7 @@ class FragBasedGraphContext(IGraphContext):
         for bond_atom in bond_atoms:
             _pop_H(bond_atom)
 
+        smiles = Chem.MolToSmiles(mol)
         Chem.SanitizeMol(mol)
         return mol
 
