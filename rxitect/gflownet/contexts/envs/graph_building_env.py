@@ -1,6 +1,7 @@
 import networkx as nx
 from networkx import Graph
 
+from rxitect.gflownet.contexts.interfaces.graph_context import IGraphContext
 from rxitect.gflownet.utils.graph import GraphAction, GraphActionType
 
 

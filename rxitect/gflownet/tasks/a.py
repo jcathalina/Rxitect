@@ -15,6 +15,7 @@ from torch.distributions.dirichlet import Dirichlet
 import torch.nn as nn
 from torch.utils.data import Dataset
 
+from rxitect.gflownet.algorithms.sub_trajectory_balance import SubTrajectoryBalance
 from rxitect.gflownet.algorithms.trajectory_balance import TrajectoryBalance
 from rxitect.gflownet.base_trainer import BaseTrainer
 from rxitect.gflownet.contexts.envs.graph_building_env import GraphBuildingEnv
@@ -39,7 +40,7 @@ class SEHFragTrainer(BaseTrainer):
             'num_layers': 4,
             'tb_epsilon': None,
             'illegal_action_logreward': -75,
-            'reward_loss_multiplier': 10,
+            'reward_loss_multiplier': 1,
             'temperature_sample_dist': 'uniform',
             'temperature_dist_params': '(.5, 32)',
             'weight_decay': 1e-8,
@@ -247,8 +248,10 @@ class SEHMOOFragTrainer(SEHFragTrainer):
         hps = self.hps
         if hps['algo'] == 'TB':
             self.algo_ = TrajectoryBalance(self.env_, self.ctx_, self.rng, hps, max_nodes=9)
+        elif hps['algo'] == 'SUBTB':
+            self.algo_ = SubTrajectoryBalance(self.env_, self.ctx_, self.rng, hps, max_nodes=9)
         else:
-            raise ValueError("Only supports TB rn, sorry.")
+            raise ValueError("Only supports TB and SUBTB rn, sorry.")
 
     def setup_task(self):
         self.task_ = SEHMOOTask(self.training_data_, self.hps['temperature_sample_dist'],
@@ -256,7 +259,7 @@ class SEHMOOFragTrainer(SEHFragTrainer):
 
     def setup_model(self):
         model = FragBasedGraphGFN(self.ctx_, num_emb=self.hps['num_emb'], num_layers=self.hps['num_layers'],
-                                  estimate_init_state_flow=True)
+                                  estimate_init_state_flow=(self.hps['algo'] == 'TB'))
 
         if self.hps['algo'] in ['A2C', 'MOQL']:
             model.do_mask = False
@@ -331,18 +334,19 @@ def main():
     """Example of how this model can be run outside Determined"""
     hps = {
         'lr_decay': 10_000,
-        'log_dir': str(here() / f'logs/moo/run_tmp/'),
+        'log_dir': str(here() / f'logs/subtbtest/run_tmp/'),
         'num_training_steps': 10_000,
-        'validate_every': 100,
+        'validate_every': 500,
         'sampling_tau': 0.95,
         'num_layers': 6,
-        'num_data_loader_workers': 4,
+        'num_data_loader_workers': 8,
         'temperature_dist_params': '(16, 16)',
         'global_batch_size': 64,
         'algo': 'TB',
         'sql_alpha': 0.01,
         'seed': 0,
         'preference_type': 'seeded_many',
+        'lambda': 1.0
     }
     trial = SEHMOOFragTrainer(hps, torch.device('cuda'))
     trial.verbose = True

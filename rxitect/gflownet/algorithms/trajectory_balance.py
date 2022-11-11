@@ -59,7 +59,7 @@ class TrajectoryBalance(IGraphAlgorithm):
         self.reward_loss_is_mae = True
         self.tb_loss_is_mae = False
         self.tb_loss_is_huber = False
-        self.mask_invalid_rewards = False
+        self.mask_invalid_rewards = hps.get('mask_invalid_rewards', False)
         self.length_normalize_losses = False
         self.reward_normalize_losses = False
         self.sample_temp = 1

@@ -212,17 +212,9 @@ class FragBasedGraphContext(IGraphContext):
             # try:
             afrag = g.nodes[a]['v']
             bfrag = g.nodes[b]['v']
+
             u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
                     int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
-            # if self.frags_stems[afrag]:
-            #     u = int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a])
-            # else:
-            #     u = int(offsets[a])
-            #
-            # if self.frags_stems[bfrag]:
-            #     v = int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b])
-            # else:
-            #     v = int(offsets[b])
 
             bond_atoms += [u, v]
             # except IndexError:
@@ -256,7 +248,7 @@ class FragBasedGraphContext(IGraphContext):
         #   options. This catches (1) Empty graphs, (2) Unkekulizable mols (3) Valence greater than permitted
         #   (4) List index out of range for when a fragment with no stems is picked
         except Exception as e:
-            # print(f"The following exception occurred during sanity check: {e}")
+            print(f"The following exception occurred during sanity check: {e}")
             return False
         if mol is None:
             return False

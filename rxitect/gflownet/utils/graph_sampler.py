@@ -10,9 +10,10 @@ from rxitect.gflownet.contexts.interfaces.graph_context import IGraphContext
 from rxitect.gflownet.utils.graph import GraphActionType, count_backward_transitions
 
 
-class GraphSampler:
+class GraphSampler:  # TODO: Rename to FragBasedGraphSampler
     """A helper class to sample from GraphActionCategorical-producing models"""
-    def __init__(self, ctx: IGraphContext, env: GraphBuildingEnv, max_len: int, max_nodes: int, rng: np.random.RandomState, sample_temp: float = 1.0) -> None:
+    def __init__(self, ctx: IGraphContext, env: GraphBuildingEnv, max_len: int, max_nodes: int,
+                 rng: np.random.RandomState, sample_temp: float = 1.0) -> None:
         """
         Parameters
         ----------
