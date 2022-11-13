@@ -1,3 +1,4 @@
+import copy
 from typing import List, Tuple
 
 import networkx as nx
@@ -5,12 +6,13 @@ import numpy as np
 import pandas as pd
 import rdkit.Chem as Chem
 import torch
-from networkx import Graph
+# from networkx import Graph
 from rdkit.Chem import Mol, AtomValenceException
 from torch_geometric.data import Data, Batch
 
 from rxitect.gflownet.contexts.interfaces.graph_context import IGraphContext
-from rxitect.gflownet.utils.graph import GraphActionType, GraphAction
+from rxitect.gflownet.utils.common import mutless_pop
+from rxitect.gflownet.utils.graph import GraphActionType, GraphAction, Graph
 from pyprojroot import here
 
 
@@ -133,6 +135,7 @@ class FragBasedGraphContext(IGraphContext):
         data:  Data
             The corresponding torch_geometric object.
         """
+        curr_stems = []
         x = torch.zeros((max(1, len(g.nodes)), self.num_node_dim))
         x[0, -1] = len(g.nodes) == 0
         for i, n in enumerate(g.nodes):
@@ -147,22 +150,31 @@ class FragBasedGraphContext(IGraphContext):
                 edge_attr[i * 2 + 1, idx] = 1
                 if f'{int(n)}_attach' not in ad:
                     set_edge_attr_mask[i, offset:offset + len(self.frags_stems[g.nodes[n]['v']])] = 1
+                    # set_edge_attr_mask[i, offset:offset + len(g.nodes[n]['stems'])] = 1  # Testing... not this, just mask separately?
+                # if
+                # # FIXME: Experiment to see if the mirrored attach attr is the problem
+                # #   i.e., if n_attach:v exists in ad, then disallow v_attach:n as well!
+                # if f'{int(n)}_attach' in ad:
+                #     v = ad[f'{int(n)}_attach']
+                #     set_edge_attr_mask[i, offset:offset + len(self.frags_stems[g.nodes[v]['v']])] = 0
         edge_index = torch.tensor([e for i, j in g.edges for e in [(i, j), (j, i)]], dtype=torch.long).reshape(
             (-1, 2)).T
         if x.shape[0] == self.max_frags:
             add_node_mask = torch.zeros((x.shape[0], 1))
         else:
-            # TODO: This is where we should be checking if nodes are still valid to be used as sources right?
+            # This is where we should be checking if nodes are still valid to be used as sources.
             add_node_mask = torch.ones((x.shape[0], 1))
-            # ATTEMPT 1: MASK SOURCE NODES MAYBE
+            # ATTEMPT 1: MASK SOURCE NODES MAYBE (NOTE: Actually works lmao)
+            # TODO: Now that nodes keep track of their stems, we can skip a degree check and
+            #   just do >>> if not node['stems']: ...
             if len(g.nodes) > 1:
                 for i, n in enumerate(g.nodes):
                     node = g.nodes[n]
                     curr_frag_idx = node['v']
                     if g.degree(i) == len(self.frags_stems[curr_frag_idx]):
                         add_node_mask[i] = 0
-                    if g.degree(i) > len(self.frags_stems[curr_frag_idx]):  # TODO: Grab stems from value of node
-                        print("What the fuck man.")
+                    if g.degree(i) > len(self.frags_stems[curr_frag_idx]):
+                        raise ValueError("Guaranteed valence violation detected. Stop it.")  # TODO: Replace with custom exception?
 
         return Data(x, edge_index, edge_attr, add_node_mask=add_node_mask, set_edge_attr_mask=set_edge_attr_mask)
 
@@ -208,13 +220,48 @@ class FragBasedGraphContext(IGraphContext):
 
         mol = Chem.EditableMol(mol)
         bond_atoms = []
+
+        popped_u_stems = []
+        popped_v_stems = []
+
+        # # FIXME: for each graph here, nodes should be created in here so that we don't mess with mutating stuff outside
+        # for i in g:
+        #     g.nodes[i]['stems'] = copy.deepcopy(self.frags_stems[g.nodes[i]['v']])
+
         for a, b in g.edges:
             # try:
             afrag = g.nodes[a]['v']
             bfrag = g.nodes[b]['v']
 
-            u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
-                    int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
+            q1 = g.edges[(a, b)]
+            t1 = g.edges[(a, b)].get(f'{a}_attach', 0)
+            t2 = g.edges[(a, b)].get(f'{b}_attach', 0)
+            # FIXME: New hypothesis: This thing probably keeps selecting 0, we have to somehow make sure the
+            #   default is something that hasn't been picked yet. We can keep using index 0 but then
+            #   we would have to keep track of which stems a fragment has available here...
+            #   I suppose we could add the stems as node attribute and basically use that as a tracker?
+            #   UPDATE: this works, but the issue was that it used to focus on H-bond overload...
+
+            u_idx = g.edges[(a, b)].get(f'{a}_attach', 0)
+
+            v_idx = g.edges[(a, b)].get(f'{b}_attach', 0)
+
+            # u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
+            #         int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
+            stem_check_u = g.nodes[a]['stems']
+            total_stem_u = self.frags_stems[afrag]
+            stem_check_v = g.nodes[b]['stems']
+            total_stem_v = self.frags_stems[bfrag]
+
+            u, v = (int(g.nodes[a]['stems'][u_idx] + offsets[a]),
+                    int(g.nodes[b]['stems'][v_idx] + offsets[b]))
+
+            # u_used_stem = g.nodes[a]['stems'].pop(u_idx)
+            # v_used_stem = g.nodes[b]['stems'].pop(v_idx)
+            g.nodes[a]['stems'] = mutless_pop(g.nodes[a]['stems'], u_idx)
+            g.nodes[b]['stems'] = mutless_pop(g.nodes[b]['stems'], v_idx)
+            # popped_u_stems.append(u_used_stem)
+            # popped_v_stems.append(v_used_stem)
 
             bond_atoms += [u, v]
             # except IndexError:

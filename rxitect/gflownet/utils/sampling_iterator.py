@@ -11,8 +11,10 @@ from torch.utils.data import Dataset
 from torch.utils.data import IterableDataset
 
 from rxitect.gflownet.algorithms.interfaces.graph_algorithm import IGraphAlgorithm
+from rxitect.gflownet.contexts.frag_graph_context import FragBasedGraphContext
 from rxitect.gflownet.contexts.interfaces.graph_context import IGraphContext
 from rxitect.gflownet.tasks.interfaces.graph_task import IGraphTask
+from rxitect.gflownet.utils.graph import Graph
 from rxitect.gflownet.utils.types import FlatRewards
 
 
@@ -161,6 +163,7 @@ class SamplingIterator(IterableDataset):
                     valid_idcs = torch.tensor(
                         [i + num_offline for i in range(num_online) if trajs[i + num_offline]['is_valid']]).long()
                     # fetch the valid trajectories endpoints
+                    [self._replenish_stems(trajs[i]['traj'][-1][0]) for i in valid_idcs]
                     mols = [self.ctx.graph_to_mol(trajs[i]['traj'][-1][0]) for i in valid_idcs]
                     # ask the task to compute their reward
                     preds, m_is_valid = self.task.compute_flat_rewards(mols)
@@ -212,6 +215,7 @@ class SamplingIterator(IterableDataset):
             yield batch
 
     def log_generated(self, trajs, rewards, flat_rewards, cond_info):
+        [self._replenish_stems(trajs[i]['traj'][-1][0]) if trajs[i]['is_valid'] else '' for i in range(len(trajs))]
         mols = [
             Chem.MolToSmiles(self.ctx.graph_to_mol(trajs[i]['traj'][-1][0])) if trajs[i]['is_valid'] else ''
             for i in range(len(trajs))
@@ -230,6 +234,13 @@ class SamplingIterator(IterableDataset):
 
     def __getitem__(self, index: int) -> None:
         pass
+
+    def _replenish_stems(self, g: Graph):
+        if hasattr(self.ctx, "frags_stems"):
+            for i in g.nodes:
+                g.nodes[i]['stems'] = self.ctx.frags_stems[g.nodes[i]['v']]
+        else:
+            raise ValueError("This context does not use stems")
 
 
 class SQLiteLog:

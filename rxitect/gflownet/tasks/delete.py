@@ -92,8 +92,8 @@ class DrugExV2FragTrainer(BaseTrainer):
         hps = self.hps
         RDLogger.DisableLog('rdApp.*')
         self.rng = np.random.default_rng(142857)
-        self.env_ = GraphBuildingEnv()
         self.ctx_ = FragBasedGraphContext(max_frags=9, num_cond_dim=hps['num_cond_dim'])
+        self.env_ = GraphBuildingEnv(ctx=self.ctx_)
         self.training_data_ = []
         self.test_data_ = []
         self.offline_ratio = 0
@@ -189,7 +189,7 @@ class DrugExV2FragTrainer(BaseTrainer):
         return {
             'bootstrap_own_reward': False,
             'learning_rate': 1e-4,
-            'global_batch_size': 2,
+            'global_batch_size': 32,
             'num_emb': 128,
             'num_layers': 6,
             'tb_epsilon': None,
@@ -216,7 +216,7 @@ class DrugExV2FragTrainer(BaseTrainer):
             'validate_every': 250,
             'valid_sample_cond_info': False,
             'mask_invalid_rewards': False,
-        }
+        }  # TODO: Max nodes should also be part of hps..
 
 
 def main():

@@ -80,18 +80,25 @@ class GraphSampler:  # TODO: Rename to FragBasedGraphSampler
             return x * m + -1000 * (1 - m)
 
         for t in range(self.max_nodes):
+
             # Construct graphs for the trajectories that aren't yet done
             torch_graphs = [self.ctx.graph_to_Data(i) for i in not_done(graphs)]
             not_done_mask = torch.tensor(done, device=device).logical_not()
             # Forward pass to get GraphActionCategorical
             fwd_cat, log_reward_preds = model(self.ctx.collate(torch_graphs).to(device), cond_info[not_done_mask])
 
+            # FIXME: We should check for validity on the sources, namely: a source should
+            #   NEVER be allowed to be used if it has used up all of its stems.
+            #   UPDATE: This has been fixed for frag graph context!
+
             # FIXME: Experimental avoidance of early stop
             if t < 2:
                 fwd_cat.logits[0] = _mask(fwd_cat.logits[0].detach().cpu(), torch.tensor([0.]))  # .cuda()
-            #
-            # FIXME: We should check for validity on the sources, namely: a source should
-            #   NEVER be allowed to be used if it has used up all of its stems.
+
+            # FIXME: Disable set edge attr and see what happens with validity?
+            #   TODO: This guy is problematic after the 100% validity fix, node stems must be set to 1 with the
+            #       most up to date stems only!!
+            fwd_cat.logits[2] = _mask(fwd_cat.logits[2].detach().cpu(), torch.zeros_like(fwd_cat.logits[2]))
 
             if self.random_action_prob > 0:
                 masks = [1] * len(fwd_cat.logits) if fwd_cat.masks is None else fwd_cat.masks
@@ -113,6 +120,7 @@ class GraphSampler:  # TODO: Rename to FragBasedGraphSampler
                 actions = sample_cat.sample()
             else:
                 actions = fwd_cat.sample()
+
             graph_actions = [self.ctx.aidx_to_GraphAction(g, a) for g, a in zip(torch_graphs, actions)]
             log_probs = fwd_cat.log_prob(actions)
             # Step each trajectory, and accumulate statistics
@@ -121,6 +129,7 @@ class GraphSampler:  # TODO: Rename to FragBasedGraphSampler
                 data[i]['traj'].append((graphs[i], graph_actions[j]))
                 # Check if we're done
                 # FIXME: Currently, stop action is allowed even for empty graphs, this is unreasonable.
+                #   UPDATE: This has been fixed!
                 if graph_actions[j].action is GraphActionType.Stop or t == self.max_nodes - 1:
                     done[i] = True
                     if self.sanitize_samples and not self.ctx.is_sane(graphs[i]):

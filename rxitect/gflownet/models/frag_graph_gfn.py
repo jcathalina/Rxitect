@@ -80,9 +80,12 @@ class FragBasedGraphGFN(nn.Module):
             g,
             logits=[
                 self.emb2stop(graph_embeddings),
-                _mask(self.emb2add_node(node_embeddings), g.add_node_mask),  # FIXME: Where do we build this mask?
+                _mask(self.emb2add_node(node_embeddings), g.add_node_mask),
                 _mask(torch.cat([src_anchor_logits, dst_anchor_logits], 1), g.set_edge_attr_mask),
             ],
+            # FIXME: NaN bug happening at logit calc for some reason, not sure what's causing it. check if masks are sane?
+            #   UPDATE: Figured it out, was the set_edge_attr mask... However, if we don't adjust for stem it does not
+            #   always make legal attachment points when set_edge_attr action happens.
             keys=[None, 'x', 'edge_index'],
             types=self.action_type_order,
             masks=[torch.ones(1), g.add_node_mask.cpu(),

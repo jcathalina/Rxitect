@@ -5,10 +5,19 @@ from typing import List, Tuple, Optional, Dict
 import networkx as nx
 import numpy as np
 import torch
-from networkx import Graph
+# from networkx import Graph
 from torch import nn
 from torch_geometric.data import Batch
 from torch_scatter import scatter, scatter_max
+
+
+class Graph(nx.Graph):
+    # Subclassing nx.Graph for debugging purposes
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f'<{list(self.nodes)}, {list(self.edges)}, {list(self.nodes[i]["v"] for i in self.nodes)}, {list(self.nodes[i]["frags"] for i in self.nodes)}, {list(self.nodes[i]["stems"] for i in self.nodes)}>'
 
 
 class GraphActionType(enum.Enum):
