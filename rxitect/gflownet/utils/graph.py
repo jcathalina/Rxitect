@@ -254,7 +254,7 @@ class GraphActionCategorical:
         if torch.isfinite(type_max_val).logical_not_().any():
             raise ValueError('Non finite max value in sample', (type_max_val, x))
 
-        # Now we can return the indices of where the actions occured
+        # Now we can return the indices of where the actions occurred
         # in the form List[(type, row, column)]
         assert dim_size == type_max_idx.shape[0]
         argmaxes = []
@@ -285,6 +285,10 @@ class GraphActionCategorical:
         """
         if logprobs is None:
             logprobs = self.logsoftmax()
+            # FIXME: breaks when actions contain nonsense, e.g. (0, 1, 0), stop
+            #   action is supposed to be (0,0,0) no matter what.
+            #   This happens when too many illegal set edge attrs happen and we
+            #   have a model that outputs NaNs for logits :(
         return torch.stack([logprobs[t][row + self.slice[t][i], col] for i, (t, row, col) in enumerate(actions)])
 
     def entropy(self, logprobs=None):

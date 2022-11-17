@@ -76,12 +76,15 @@ class FragBasedGraphGFN(nn.Module):
             # mask logit vector x with binary mask m, -1000 is a tiny log-value
             return x * m + -1000 * (1 - m)
 
+        # print(g)
+        # print(f"Mask looks like this right now: {g.set_edge_attr_mask}")
         cat = GraphActionCategorical(
             g,
             logits=[
                 self.emb2stop(graph_embeddings),
                 _mask(self.emb2add_node(node_embeddings), g.add_node_mask),
                 _mask(torch.cat([src_anchor_logits, dst_anchor_logits], 1), g.set_edge_attr_mask),
+                # torch.cat([src_anchor_logits, dst_anchor_logits], 1)
             ],
             # FIXME: NaN bug happening at logit calc for some reason, not sure what's causing it. check if masks are sane?
             #   UPDATE: Figured it out, was the set_edge_attr mask... However, if we don't adjust for stem it does not

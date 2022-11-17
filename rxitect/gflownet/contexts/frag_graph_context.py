@@ -135,7 +135,6 @@ class FragBasedGraphContext(IGraphContext):
         data:  Data
             The corresponding torch_geometric object.
         """
-        curr_stems = []
         x = torch.zeros((max(1, len(g.nodes)), self.num_node_dim))
         x[0, -1] = len(g.nodes) == 0
         for i, n in enumerate(g.nodes):
@@ -148,25 +147,25 @@ class FragBasedGraphContext(IGraphContext):
                 idx = ad.get(f'{int(n)}_attach', 0) + offset
                 edge_attr[i * 2, idx] = 1
                 edge_attr[i * 2 + 1, idx] = 1
+
                 if f'{int(n)}_attach' not in ad:
-                    set_edge_attr_mask[i, offset:offset + len(self.frags_stems[g.nodes[n]['v']])] = 1
-                    # set_edge_attr_mask[i, offset:offset + len(g.nodes[n]['stems'])] = 1  # Testing... not this, just mask separately?
-                # if
-                # # FIXME: Experiment to see if the mirrored attach attr is the problem
-                # #   i.e., if n_attach:v exists in ad, then disallow v_attach:n as well!
-                # if f'{int(n)}_attach' in ad:
-                #     v = ad[f'{int(n)}_attach']
-                #     set_edge_attr_mask[i, offset:offset + len(self.frags_stems[g.nodes[v]['v']])] = 0
+                    # If the model has not picked a stem for this node in this bond yet,
+                    # it has an action available there.
+                    # However: we have to adjust for the remaining stems for each node to avoid
+                    # the model thinking it can set an edge attribute at a stem
+                    # when it's already occupied, hence the num_total_stems for that node minus its current degree.
+                    num_remaining_stems = len(self.frags_stems[g.nodes[n]['v']]) - g.degree(n)
+                    set_edge_attr_mask[i, offset:offset + num_remaining_stems] = 1
+
         edge_index = torch.tensor([e for i, j in g.edges for e in [(i, j), (j, i)]], dtype=torch.long).reshape(
             (-1, 2)).T
         if x.shape[0] == self.max_frags:
             add_node_mask = torch.zeros((x.shape[0], 1))
         else:
-            # This is where we should be checking if nodes are still valid to be used as sources.
+            # This is where we check if nodes are still valid to be used as sources to attach new nodes to.
+            # Any node with degree equal to their stem capacity can by definition no longer accept new bonds.
+            # This would otherwise result in a valence violation in the context of molecules.
             add_node_mask = torch.ones((x.shape[0], 1))
-            # ATTEMPT 1: MASK SOURCE NODES MAYBE (NOTE: Actually works lmao)
-            # TODO: Now that nodes keep track of their stems, we can skip a degree check and
-            #   just do >>> if not node['stems']: ...
             if len(g.nodes) > 1:
                 for i, n in enumerate(g.nodes):
                     node = g.nodes[n]
@@ -174,7 +173,7 @@ class FragBasedGraphContext(IGraphContext):
                     if g.degree(i) == len(self.frags_stems[curr_frag_idx]):
                         add_node_mask[i] = 0
                     if g.degree(i) > len(self.frags_stems[curr_frag_idx]):
-                        raise ValueError("Guaranteed valence violation detected. Stop it.")  # TODO: Replace with custom exception?
+                        raise ValueError("Guaranteed valence violation detected.")  # TODO: Replace with custom exception?
 
         return Data(x, edge_index, edge_attr, add_node_mask=add_node_mask, set_edge_attr_mask=set_edge_attr_mask)
 
@@ -221,21 +220,7 @@ class FragBasedGraphContext(IGraphContext):
         mol = Chem.EditableMol(mol)
         bond_atoms = []
 
-        popped_u_stems = []
-        popped_v_stems = []
-
-        # # FIXME: for each graph here, nodes should be created in here so that we don't mess with mutating stuff outside
-        # for i in g:
-        #     g.nodes[i]['stems'] = copy.deepcopy(self.frags_stems[g.nodes[i]['v']])
-
         for a, b in g.edges:
-            # try:
-            afrag = g.nodes[a]['v']
-            bfrag = g.nodes[b]['v']
-
-            q1 = g.edges[(a, b)]
-            t1 = g.edges[(a, b)].get(f'{a}_attach', 0)
-            t2 = g.edges[(a, b)].get(f'{b}_attach', 0)
             # FIXME: New hypothesis: This thing probably keeps selecting 0, we have to somehow make sure the
             #   default is something that hasn't been picked yet. We can keep using index 0 but then
             #   we would have to keep track of which stems a fragment has available here...
@@ -243,32 +228,15 @@ class FragBasedGraphContext(IGraphContext):
             #   UPDATE: this works, but the issue was that it used to focus on H-bond overload...
 
             u_idx = g.edges[(a, b)].get(f'{a}_attach', 0)
-
             v_idx = g.edges[(a, b)].get(f'{b}_attach', 0)
-
-            # u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
-            #         int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
-            stem_check_u = g.nodes[a]['stems']
-            total_stem_u = self.frags_stems[afrag]
-            stem_check_v = g.nodes[b]['stems']
-            total_stem_v = self.frags_stems[bfrag]
 
             u, v = (int(g.nodes[a]['stems'][u_idx] + offsets[a]),
                     int(g.nodes[b]['stems'][v_idx] + offsets[b]))
 
-            # u_used_stem = g.nodes[a]['stems'].pop(u_idx)
-            # v_used_stem = g.nodes[b]['stems'].pop(v_idx)
             g.nodes[a]['stems'] = mutless_pop(g.nodes[a]['stems'], u_idx)
             g.nodes[b]['stems'] = mutless_pop(g.nodes[b]['stems'], v_idx)
-            # popped_u_stems.append(u_used_stem)
-            # popped_v_stems.append(v_used_stem)
 
             bond_atoms += [u, v]
-            # except IndexError:
-            #     print(f"Index that caused the error: a={a} OR b={b} -- edges: {g.edges}, #edges: {len(g.edges)}")
-            #     print(f"a-frag: {afrag}, u: {self.frags_stems[afrag]}")
-            #     print(f"b-frag: {bfrag}, v: {self.frags_stems[bfrag]}")
-            #     exit(0)
             mol.AddBond(u, v, Chem.BondType.SINGLE)
         mol = mol.GetMol()
 

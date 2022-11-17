@@ -98,7 +98,7 @@ class GraphSampler:  # TODO: Rename to FragBasedGraphSampler
             # FIXME: Disable set edge attr and see what happens with validity?
             #   TODO: This guy is problematic after the 100% validity fix, node stems must be set to 1 with the
             #       most up to date stems only!!
-            fwd_cat.logits[2] = _mask(fwd_cat.logits[2].detach().cpu(), torch.zeros_like(fwd_cat.logits[2]))
+            # fwd_cat.logits[2] = _mask(fwd_cat.logits[2].detach().cpu(), torch.zeros_like(fwd_cat.logits[2]))
 
             if self.random_action_prob > 0:
                 masks = [1] * len(fwd_cat.logits) if fwd_cat.masks is None else fwd_cat.masks

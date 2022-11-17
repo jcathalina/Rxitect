@@ -196,9 +196,9 @@ class DrugExV2FragTrainer(BaseTrainer):
             'illegal_action_logreward': -75,
             'reward_loss_multiplier': 1,
             'temperature_sample_dist': 'uniform',
-            'temperature_dist_params': '(32, 32)',
+            'temperature_dist_params': '(96, 96)',
             'weight_decay': 1e-8,
-            'num_data_loader_workers': 0,
+            'num_data_loader_workers': 4,
             'momentum': 0.9,
             'adam_eps': 1e-8,
             'lr_decay': 20_000,
@@ -220,7 +220,7 @@ class DrugExV2FragTrainer(BaseTrainer):
 
 
 def main():
-    device = "cpu"
+    device = "cuda"
     trial = DrugExV2FragTrainer({}, torch.device(device))
     trial.verbose = True
     trial.run()
