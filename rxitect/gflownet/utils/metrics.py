@@ -18,14 +18,16 @@ def generate_simplex(dims, n_per_dim):
     return np.array([comb for comb in product(*spaces) if np.allclose(sum(comb), 1.0)])
 
 
-def pareto_frontier(obj_vals, maximize=True):
+def pareto_frontier(obj_vals, maximize: bool = True):
     """
     Compute the Pareto frontier of a set of candidate solutions.
-    ----------
+
     Parameters
-        candidate_pool: NumPy array of candidate objects
-        obj_vals: NumPy array of objective values
     ----------
+        obj_vals:
+            NumPy array of objective values
+        maximize:
+            Flag that determines if candidate solutions should be maximizing their score. True by default.
     """
     # pareto utility assumes maximization
     if maximize:

@@ -5,10 +5,19 @@ from typing import List, Tuple, Optional, Dict
 import networkx as nx
 import numpy as np
 import torch
-from networkx import Graph
+# from networkx import Graph
 from torch import nn
 from torch_geometric.data import Batch
 from torch_scatter import scatter, scatter_max
+
+
+class Graph(nx.Graph):
+    # Subclassing nx.Graph for debugging purposes
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f'<{list(self.nodes)}, {list(self.edges)}, {list(self.nodes[i]["v"] for i in self.nodes)}, {list(self.nodes[i]["frags"] for i in self.nodes)}, {list(self.nodes[i]["stems"] for i in self.nodes)}>'
 
 
 class GraphActionType(enum.Enum):
@@ -245,7 +254,7 @@ class GraphActionCategorical:
         if torch.isfinite(type_max_val).logical_not_().any():
             raise ValueError('Non finite max value in sample', (type_max_val, x))
 
-        # Now we can return the indices of where the actions occured
+        # Now we can return the indices of where the actions occurred
         # in the form List[(type, row, column)]
         assert dim_size == type_max_idx.shape[0]
         argmaxes = []
@@ -276,6 +285,10 @@ class GraphActionCategorical:
         """
         if logprobs is None:
             logprobs = self.logsoftmax()
+            # FIXME: breaks when actions contain nonsense, e.g. (0, 1, 0), stop
+            #   action is supposed to be (0,0,0) no matter what.
+            #   This happens when too many illegal set edge attrs happen and we
+            #   have a model that outputs NaNs for logits :(
         return torch.stack([logprobs[t][row + self.slice[t][i], col] for i, (t, row, col) in enumerate(actions)])
 
     def entropy(self, logprobs=None):

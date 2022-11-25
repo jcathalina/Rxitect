@@ -15,8 +15,8 @@ class TestGraphSampling(unittest.TestCase):
     def test_that_valid_molecules_are_built_by_sampling(self):
         env = GraphBuildingEnv()
         ctx = FragBasedGraphContext(max_frags=9, num_cond_dim=32)
-        sampler = GraphSampler(ctx=ctx, env=env, max_nodes=9, max_len=128, rng=np.random.RandomState(123))
-        model = FragBasedGraphGFN(env_ctx=ctx, estimate_init_state_flow=True)
+        sampler = GraphSampler(ctx=ctx, env=env, max_nodes=9, max_steps=128, rng=np.random.RandomState(123))
+        model = FragBasedGraphGFN(ctx=ctx, estimate_init_state_flow=True)
         s = sampler.sample_from_model(model=model, n=1, cond_info=torch.zeros(1), device=torch.device("cpu"))
         print(s)
 

@@ -1,3 +1,4 @@
+import copy
 from typing import List, Tuple
 
 import networkx as nx
@@ -5,12 +6,13 @@ import numpy as np
 import pandas as pd
 import rdkit.Chem as Chem
 import torch
-from networkx import Graph
+# from networkx import Graph
 from rdkit.Chem import Mol, AtomValenceException
 from torch_geometric.data import Data, Batch
 
 from rxitect.gflownet.contexts.interfaces.graph_context import IGraphContext
-from rxitect.gflownet.utils.graph import GraphActionType, GraphAction
+from rxitect.gflownet.utils.common import mutless_pop
+from rxitect.gflownet.utils.graph import GraphActionType, GraphAction, Graph
 from pyprojroot import here
 
 
@@ -145,24 +147,33 @@ class FragBasedGraphContext(IGraphContext):
                 idx = ad.get(f'{int(n)}_attach', 0) + offset
                 edge_attr[i * 2, idx] = 1
                 edge_attr[i * 2 + 1, idx] = 1
+
                 if f'{int(n)}_attach' not in ad:
-                    set_edge_attr_mask[i, offset:offset + len(self.frags_stems[g.nodes[n]['v']])] = 1
+                    # If the model has not picked a stem for this node in this bond yet,
+                    # it has an action available there.
+                    # However: we have to adjust for the remaining stems for each node to avoid
+                    # the model thinking it can set an edge attribute at a stem
+                    # when it's already occupied, hence the num_total_stems for that node minus its current degree.
+                    num_remaining_stems = len(self.frags_stems[g.nodes[n]['v']]) - g.degree(n)
+                    set_edge_attr_mask[i, offset:offset + num_remaining_stems] = 1
+
         edge_index = torch.tensor([e for i, j in g.edges for e in [(i, j), (j, i)]], dtype=torch.long).reshape(
             (-1, 2)).T
         if x.shape[0] == self.max_frags:
             add_node_mask = torch.zeros((x.shape[0], 1))
         else:
-            # TODO: This is where we should be checking if nodes are still valid to be used as sources right?
+            # This is where we check if nodes are still valid to be used as sources to attach new nodes to.
+            # Any node with degree equal to their stem capacity can by definition no longer accept new bonds.
+            # This would otherwise result in a valence violation in the context of molecules.
             add_node_mask = torch.ones((x.shape[0], 1))
-            # ATTEMPT 1: MASK SOURCE NODES MAYBE
             if len(g.nodes) > 1:
                 for i, n in enumerate(g.nodes):
                     node = g.nodes[n]
                     curr_frag_idx = node['v']
                     if g.degree(i) == len(self.frags_stems[curr_frag_idx]):
                         add_node_mask[i] = 0
-                    if g.degree(i) > len(self.frags_stems[curr_frag_idx]):  # TODO: Grab stems from value of node
-                        print("What the fuck man.")
+                    if g.degree(i) > len(self.frags_stems[curr_frag_idx]):
+                        raise ValueError("Guaranteed valence violation detected.")  # TODO: Replace with custom exception?
 
         return Data(x, edge_index, edge_attr, add_node_mask=add_node_mask, set_edge_attr_mask=set_edge_attr_mask)
 
@@ -208,20 +219,24 @@ class FragBasedGraphContext(IGraphContext):
 
         mol = Chem.EditableMol(mol)
         bond_atoms = []
-        for a, b in g.edges:
-            # try:
-            afrag = g.nodes[a]['v']
-            bfrag = g.nodes[b]['v']
 
-            u, v = (int(self.frags_stems[afrag][g.edges[(a, b)].get(f'{a}_attach', 0)] + offsets[a]),
-                    int(self.frags_stems[bfrag][g.edges[(a, b)].get(f'{b}_attach', 0)] + offsets[b]))
+        for a, b in g.edges:
+            # FIXME: New hypothesis: This thing probably keeps selecting 0, we have to somehow make sure the
+            #   default is something that hasn't been picked yet. We can keep using index 0 but then
+            #   we would have to keep track of which stems a fragment has available here...
+            #   I suppose we could add the stems as node attribute and basically use that as a tracker?
+            #   UPDATE: this works, but the issue was that it used to focus on H-bond overload...
+
+            u_idx = g.edges[(a, b)].get(f'{a}_attach', 0)
+            v_idx = g.edges[(a, b)].get(f'{b}_attach', 0)
+
+            u, v = (int(g.nodes[a]['stems'][u_idx] + offsets[a]),
+                    int(g.nodes[b]['stems'][v_idx] + offsets[b]))
+
+            g.nodes[a]['stems'] = mutless_pop(g.nodes[a]['stems'], u_idx)
+            g.nodes[b]['stems'] = mutless_pop(g.nodes[b]['stems'], v_idx)
 
             bond_atoms += [u, v]
-            # except IndexError:
-            #     print(f"Index that caused the error: a={a} OR b={b} -- edges: {g.edges}, #edges: {len(g.edges)}")
-            #     print(f"a-frag: {afrag}, u: {self.frags_stems[afrag]}")
-            #     print(f"b-frag: {bfrag}, v: {self.frags_stems[bfrag]}")
-            #     exit(0)
             mol.AddBond(u, v, Chem.BondType.SINGLE)
         mol = mol.GetMol()
 

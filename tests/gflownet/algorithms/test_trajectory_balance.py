@@ -43,7 +43,7 @@ def encode_conditional_information(info, temperature_dist_params):
 class TestTrajectoryBalanceAlgorithm(unittest.TestCase):
     env = GraphBuildingEnv()
     ctx = FragBasedGraphContext()
-    model = FragBasedGraphGFN(env_ctx=ctx, estimate_init_state_flow=True)
+    model = FragBasedGraphGFN(ctx=ctx, estimate_init_state_flow=True)
     hps = {
         'illegal_action_logreward': -75,
         'bootstrap_own_reward': False,

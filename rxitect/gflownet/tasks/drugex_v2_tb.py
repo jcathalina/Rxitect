@@ -90,9 +90,10 @@ class DrugExV2Task(IGraphTask):
         a1score_preds = torch.from_numpy(a1score_preds.astype(np.float32))
         hergscore_preds = torch.from_numpy(hergscore_preds.astype(np.float32))
 
-        a2as = a2ascore_preds / 9.0  # 95pth percentile for A2A pChEMBL values is 9, so most will be [0-1]
-        a1s = a1score_preds / 9.0  # 95pth percentile for A1 pChEMBL values is 9, so most will be [0-1]
-        hergs = 1.0 - (hergscore_preds / 9.0)  # 95pth percentile for hERG pChEMBL values is 9, so most will be [0-1]
+        # TODO: replace with predictors that are trained on scaled [0-1] values.
+        a2as = (a2ascore_preds / 8.8).clamp(0, 1)  # 95th percentile for A2A pChEMBL values is 8.8, so most will be [0-1]
+        a1s = (a1score_preds / 8.6).clamp(0, 1)  # 95pth percentile for A1 pChEMBL values is 8.6, so most will be [0-1]
+        hergs = 1.0 - (hergscore_preds / 7.4).clamp(0, 1)  # 95pth percentile for hERG pChEMBL values is 7.4, so most will be [0-1]
 
         flat_rewards = torch.stack([a2as, a1s, hergs], 1)
 
@@ -104,8 +105,8 @@ class DrugExV2FragTrainer(BaseTrainer):
         hps = self.hps
         RDLogger.DisableLog('rdApp.*')
         self.rng = np.random.default_rng(142857)
-        self.env_ = GraphBuildingEnv()
         self.ctx_ = FragBasedGraphContext(max_frags=9, num_cond_dim=hps['num_cond_dim'])
+        self.env_ = GraphBuildingEnv(ctx=self.ctx_)
         self.training_data_ = []
         self.test_data_ = []
         self.offline_ratio = 0
@@ -223,8 +224,8 @@ class DrugExV2FragTrainer(BaseTrainer):
             'seed': 0,
             'preference_type': 'seeded_many',
             'algo': 'TB',
-            'log_dir': str(here() / f'logs/moo/drugex_v2_tb/'),
-            'num_training_steps': 10_000,
+            'log_dir': str(here() / f'logs/mogfn/drugex_v2_tb/'),
+            'num_training_steps': 20_000,
             'validate_every': 250,
             'valid_sample_cond_info': False,
             'mask_invalid_rewards': False,

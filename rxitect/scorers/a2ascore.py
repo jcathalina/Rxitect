@@ -278,7 +278,7 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     single_task(
-        feat="CHEMBL251",
+        feat="CHEMBL240",
         ligand_path=here() / "data/ligand_raw.tsv",
         pair=pair,
         reg=True,

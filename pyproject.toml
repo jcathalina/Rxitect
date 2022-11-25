@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rxitect"
+dynamic = ["version", "readme", "dependencies"]
+description = "A collection of molecular generators created to experiment with retrosynthetic-accessbility-aware models"
+authors = [{name = "Julius Cathalina", email = "j.e.j.cathalina@vuw.leidenuniv.nl"}]
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+]
+keywords = ["deep-reinforcement-learning", "de-novo-drug-design", "generative-flow-networks", "drug-discovery", "multi-objective-optimization"]
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
+
+[tool.setuptools.packages.find]
+include = ["rxitect", "rxitect.*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "rxitect.VERSION"}
+readme = {file = ["README.md"]}
+dependencies = {file = ["requirements.txt"]}

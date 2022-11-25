@@ -7,11 +7,9 @@ import torch.nn as nn
 from torch_geometric.data import Batch
 from torch_scatter import scatter
 
-from rxitect.gflownet.algorithms.interfaces.graph_algorithm import IGraphAlgorithm
 from rxitect.gflownet.algorithms.trajectory_balance import TrajectoryBalance
 from rxitect.gflownet.contexts.envs.graph_building_env import GraphBuildingEnv
 from rxitect.gflownet.contexts.interfaces.graph_context import IGraphContext
-from rxitect.gflownet.utils.graph import count_backward_transitions
 from rxitect.gflownet.utils.graph_sampler import GraphSampler
 
 
@@ -59,15 +57,15 @@ def sub_tb_lambda_loss(traj_lens, log_prob, log_p_B, log_reward_preds, Rp, inval
     cumul_lens = torch.cumsum(torch.cat([torch.zeros(1, device=dev), traj_lens]), 0).long()
     for ep in range(num_trajs):
         offset = cumul_lens[ep]
-        T = int(traj_lens[ep])
-        for i in range(T):
-            for j in range(i, T):
-                flag = float(j + 1 < T)
+        T = int(traj_lens[ep])  # e.g., T = 3  [A, B, C] => <[A], [A, B], [A, B, C], [B], [B, C], [C]>
+        for i in range(T):  # i = 0 -> 1 -> 2
+            for j in range(i, T):  # j = (0, 1, 2) -> (1, 2) -> (2)
+                flag = float(j + 1 < T)  # (0 + 1 < 3)=1, (1 + 1 < 3)=1, (2 + 1 < 3)=0
                 acc = log_reward_preds[offset + i] - log_reward_preds[offset + min(j + 1, T - 1)] * flag - Rp[ep] * (1 - flag)
-                for k in range(i, j + 1):
+                for k in range(i, j + 1):  # range(0, 1) -> range(0, 2) -> range(0, 3)...
                     numerator = log_prob[offset + k]
                     denominator = log_p_B[offset + k]
-                    denominator = denominator * (1 - invalid_mask[ep]) + invalid_mask[ep] * (numerator.detach() - 1)
+                    denominator = denominator * (1 - invalid_mask[ep])  # + invalid_mask[ep] * (numerator.detach() - 1)
                     # acc += log_prob[offset + k] - log_p_B[offset + k]  # This is the SubTB loss, before squaring
                     acc += numerator - denominator
                 traj_losses += acc.pow(2) * LAMBDA ** (j - 1 + 1)  # SubTB loss * Total lambda for sub-traj. i:j
@@ -119,12 +117,6 @@ class SubTrajectoryBalance(TrajectoryBalance):
         self.epsilon = hps['tb_epsilon']
         self.reward_loss_multiplier = hps['reward_loss_multiplier']
         # Experimental flags
-        self.reward_loss_is_mae = True
-        self.tb_loss_is_mae = False
-        self.tb_loss_is_huber = False
-        self.mask_invalid_rewards = False
-        self.length_normalize_losses = False
-        self.reward_normalize_losses = False
         self.sample_temp = 1
         self.graph_sampler = GraphSampler(ctx, env, max_len, max_nodes, rng, self.sample_temp)
         self.graph_sampler.random_action_prob = hps['random_action_prob']
@@ -195,60 +187,20 @@ class SubTrajectoryBalance(TrajectoryBalance):
         log_prob = fwd_cat.log_prob(batch.actions)
         # The log prob of each backward action
         log_p_B = (1 / batch.num_backward).log()
-        # Take log rewards, and clip
-        assert rewards.ndim == 1
+
         Rp = torch.maximum(rewards.log(), torch.tensor(-100.0, device=dev))
         invalid_mask = 1 - batch.is_valid
-        # if self.mask_invalid_rewards:
-        #     # Instead of being rude to the model and giving a
-        #     # logreward of -100 what if we say, whatever you think the
-        #     # logprobablity of this trajetcory is it should be smaller
-        #     # (thus the `numerator - 1`). Why 1? Intuition?
-        #     denominator = traj_losses * (1 - invalid_mask) + invalid_mask * (total_LAMBDA.detach() - 1)
+
         traj_losses, total_LAMBDA = sub_tb_lambda_loss(batch.traj_lens, log_prob, log_p_B, log_reward_preds,
                                                        Rp, invalid_mask, self.LAMBDA, str(dev))
 
         # This is the log probability of each trajectory
         traj_log_prob = scatter(log_prob, batch_idx, dim=0, dim_size=num_trajs, reduce='sum')  # traj_logits in original
-        # # Compute log numerator and denominator of the TB objective
-        # numerator = Z + traj_log_prob
-        # denominator = Rp + scatter(log_p_B, batch_idx, dim=0, dim_size=num_trajs, reduce='sum')
 
-        # if self.epsilon is not None:
-        #     # Numerical stability epsilon
-        #     epsilon = torch.tensor([self.epsilon], device=dev).float()
-        #     numerator = torch.logaddexp(numerator, epsilon)
-        #     denominator = torch.logaddexp(denominator, epsilon)
-        #
-
-
-        # if self.tb_loss_is_mae:
-        #     traj_losses = abs(numerator - denominator)
-        # else:
-        #     traj_losses = (numerator - denominator).pow(2)
-        #
         # Normalize losses by trajectory length
         if self.length_normalize_losses:
             traj_losses = traj_losses / batch.traj_lens
-        # if self.reward_normalize_losses:
-        #     # multiply each loss by how important it is, using R as the importance factor
-        #     # factor = Rp.exp() / Rp.exp().sum()
-        #     factor = -Rp.min() + Rp + 1
-        #     factor = factor / factor.sum()
-        #     assert factor.shape == traj_losses.shape
-        #     # * num_trajs because we're doing a convex combination, and a .mean() later, which would
-        #     # undercount (by 2N) the contribution of each loss
-        #     traj_losses = factor * traj_losses * num_trajs
-        #
-        # if self.bootstrap_own_reward:
-        #     num_bootstrap = num_bootstrap or len(rewards)
-        #     if self.reward_loss_is_mae:
-        #         reward_losses = abs(rewards[:num_bootstrap] - log_reward_preds[:num_bootstrap].exp())
-        #     else:
-        #         reward_losses = (rewards[:num_bootstrap] - log_reward_preds[:num_bootstrap].exp()).pow(2)
-        #     reward_loss = reward_losses.mean()
-        # else:
-        #     reward_loss = 0
+
         reward_loss = 0
 
         # loss = traj_losses.mean() + reward_loss * self.reward_loss_multiplier

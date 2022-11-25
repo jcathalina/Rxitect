@@ -1,8 +1,8 @@
-import networkx as nx
-from networkx import Graph
+# from networkx import Graph
+import copy
 
-from rxitect.gflownet.contexts.interfaces.graph_context import IGraphContext
-from rxitect.gflownet.utils.graph import GraphAction, GraphActionType
+from rxitect.gflownet.contexts.frag_graph_context import FragBasedGraphContext
+from rxitect.gflownet.utils.graph import GraphAction, GraphActionType, Graph
 
 
 class GraphBuildingEnv:
@@ -17,7 +17,7 @@ class GraphBuildingEnv:
           if it is still default-valued (DAG property preserved)
         - we can generate a legal action for any attribute that isn't a default one.
     """
-    def __init__(self, allow_add_edge: bool = True, allow_node_attr: bool = True, allow_edge_attr: bool = True) -> None:
+    def __init__(self, ctx: FragBasedGraphContext, allow_add_edge: bool = True, allow_node_attr: bool = True, allow_edge_attr: bool = True) -> None:
         """A graph building environment instance
         Parameters
         ----------
@@ -29,6 +29,7 @@ class GraphBuildingEnv:
         allow_edge_attr: bool
             if True, allows this action and computes SetEdgeAttr parents
         """
+        self.ctx = ctx
         self.allow_add_edge = allow_add_edge
         self.allow_node_attr = allow_node_attr
         self.allow_edge_attr = allow_edge_attr
@@ -66,15 +67,20 @@ class GraphBuildingEnv:
             gp.add_edge(a, b)
 
         elif action.action is GraphActionType.AddNode:
+            init_stems = copy.deepcopy(self.ctx.frags_stems[action.value])
             if len(g) == 0:
                 assert action.source == 0  # TODO: this may not be useful
-                gp.add_node(0, v=action.value)
+                gp.add_node(0, v=action.value,
+                            frags=self.ctx.frags_smi[action.value],
+                            stems=init_stems)
             else:
                 assert action.source in g.nodes
                 e = [action.source, max(g.nodes) + 1]
 
                 assert not g.has_edge(*e)
-                gp.add_node(e[1], v=action.value)
+                gp.add_node(e[1], v=action.value,
+                            frags=self.ctx.frags_smi[action.value],
+                            stems=init_stems)
                 gp.add_edge(*e)
 
         elif action.action is GraphActionType.SetNodeAttr:

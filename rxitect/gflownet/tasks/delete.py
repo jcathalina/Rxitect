@@ -92,8 +92,8 @@ class DrugExV2FragTrainer(BaseTrainer):
         hps = self.hps
         RDLogger.DisableLog('rdApp.*')
         self.rng = np.random.default_rng(142857)
-        self.env_ = GraphBuildingEnv()
         self.ctx_ = FragBasedGraphContext(max_frags=9, num_cond_dim=hps['num_cond_dim'])
+        self.env_ = GraphBuildingEnv(ctx=self.ctx_)
         self.training_data_ = []
         self.test_data_ = []
         self.offline_ratio = 0
@@ -189,23 +189,23 @@ class DrugExV2FragTrainer(BaseTrainer):
         return {
             'bootstrap_own_reward': False,
             'learning_rate': 1e-4,
-            'global_batch_size': 2,
+            'global_batch_size': 32,
             'num_emb': 128,
             'num_layers': 6,
             'tb_epsilon': None,
             'illegal_action_logreward': -75,
             'reward_loss_multiplier': 1,
             'temperature_sample_dist': 'uniform',
-            'temperature_dist_params': '(32, 32)',
+            'temperature_dist_params': '(96, 96)',
             'weight_decay': 1e-8,
-            'num_data_loader_workers': 0,
+            'num_data_loader_workers': 4,
             'momentum': 0.9,
             'adam_eps': 1e-8,
             'lr_decay': 20_000,
             'Z_lr_decay': 20_000,
             'clip_grad_type': 'norm',
             'clip_grad_param': 10,
-            'random_action_prob': 0.0,
+            'random_action_prob': 0.5,
             'num_cond_dim': 32 + NUM_PREFS,
             'sampling_tau': 0.0,
             'seed': 0,
@@ -216,11 +216,11 @@ class DrugExV2FragTrainer(BaseTrainer):
             'validate_every': 250,
             'valid_sample_cond_info': False,
             'mask_invalid_rewards': False,
-        }
+        }  # TODO: Max nodes should also be part of hps..
 
 
 def main():
-    device = "cpu"
+    device = "cuda"
     trial = DrugExV2FragTrainer({}, torch.device(device))
     trial.verbose = True
     trial.run()

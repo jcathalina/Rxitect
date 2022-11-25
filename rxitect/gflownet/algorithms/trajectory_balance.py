@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 import numpy as np
 import torch
@@ -15,14 +15,14 @@ from rxitect.gflownet.utils.graph_sampler import GraphSampler
 
 
 class TrajectoryBalance(IGraphAlgorithm):
-    """
-    """
-    def __init__(self, env: GraphBuildingEnv, ctx: IGraphContext, rng: np.random.RandomState,
-                 hps: Dict[str, Any], max_len: Optional[int] = None, max_nodes: Optional[int] = None) -> None:
-        """TB implementation, see
+    """TB implementation, see
         "Trajectory Balance: Improved Credit Assignment in GFlowNets Nikolay Malkin, Moksh Jain,
         Emmanuel Bengio, Chen Sun, Yoshua Bengio"
         https://arxiv.org/abs/2201.13259
+    """
+    def __init__(self, env: GraphBuildingEnv, ctx: IGraphContext, rng: np.random.RandomState,
+                 hps: Dict[str, Any], max_len: Optional[int] = None, max_nodes: Optional[int] = None) -> None:
+        """
 
         Hyperparameters used:
         random_action_prob: float, probability of taking a uniform random action when sampling
@@ -100,17 +100,17 @@ class TrajectoryBalance(IGraphAlgorithm):
             data[i]['logZ'] = logZ_pred[i].item()
         return data
 
-    def construct_batch(self, trajs, cond_info: torch.Tensor, rewards: torch.Tensor) -> Batch:
+    def construct_batch(self, trajs: List[Dict[str, Any]], cond_info: torch.Tensor, rewards: torch.Tensor) -> Batch:
         """Construct a batch from a list of trajectories and their information
 
         Parameters
         ----------
-        trajs: List[List[tuple[Graph, GraphAction]]]
+        trajs:
             A list of N trajectories.
         cond_info: Tensor
             The conditional info that is considered for each trajectory. Shape (N, n_info)
         rewards: Tensor
-            The transformed reward (e.g. R(x) ** beta) for each trajectory. Shape (N,)
+            The transformed reward (e.g., :math:`R(x)^\beta`) for each trajectory. Shape (N,)
         Returns
         -------
         batch: Batch
@@ -166,7 +166,7 @@ class TrajectoryBalance(IGraphAlgorithm):
         # Forward pass of the model, returns a GraphActionCategorical and the optional bootstrap predictions
         fwd_cat, log_reward_preds = model(batch, cond_info[batch_idx])
 
-        # Retreive the reward predictions for the full graphs,
+        # Retrieve the reward predictions for the full graphs,
         # i.e. the final graph of each trajectory
         log_reward_preds = log_reward_preds[final_graph_idx, 0]
         # Compute trajectory balance objective
@@ -193,8 +193,8 @@ class TrajectoryBalance(IGraphAlgorithm):
         invalid_mask = 1 - batch.is_valid
         if self.mask_invalid_rewards:
             # Instead of being rude to the model and giving a
-            # logreward of -100 what if we say, whatever you think the
-            # logprobablity of this trajetcory is it should be smaller
+            # log-reward of -100 what if we say, whatever you think the
+            # log-probability of this trajectory is it should be smaller
             # (thus the `numerator - 1`). Why 1? Intuition?
             denominator = denominator * (1 - invalid_mask) + invalid_mask * (numerator.detach() - 1)
 
