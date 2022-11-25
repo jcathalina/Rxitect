@@ -12,6 +12,7 @@ from torch import nn
 from torch.distributions import Dirichlet
 from torch.utils.data import Dataset
 
+from rxitect.gflownet.algorithms.sub_trajectory_balance import SubTrajectoryBalance
 from rxitect.gflownet.algorithms.trajectory_balance import TrajectoryBalance
 from rxitect.gflownet.base_trainer import BaseTrainer
 from rxitect.gflownet.contexts.envs.graph_building_env import GraphBuildingEnv
@@ -103,13 +104,11 @@ class DrugExV2FragTrainer(BaseTrainer):
         self.setup_model()
 
         # Separate Z parameters from non-Z to allow for LR decay on the former
-        Z_params = list(self.model_.logZ.parameters())
+        Z_params = []
         non_Z_params = [i for i in self.model_.parameters() if all(id(i) != id(j) for j in Z_params)]
         self.opt = torch.optim.Adam(non_Z_params, hps['learning_rate'], (hps['momentum'], 0.999),
                                     weight_decay=hps['weight_decay'], eps=hps['adam_eps'])
-        self.opt_Z = torch.optim.Adam(Z_params, hps['learning_rate'], (0.9, 0.999))
         self.lr_sched = torch.optim.lr_scheduler.LambdaLR(self.opt, lambda steps: 2 ** (-steps / hps['lr_decay']))
-        self.lr_sched_Z = torch.optim.lr_scheduler.LambdaLR(self.opt_Z, lambda steps: 2 ** (-steps / hps['Z_lr_decay']))
 
         self.sampling_tau = hps['sampling_tau']
         if self.sampling_tau > 0:
@@ -149,20 +148,17 @@ class DrugExV2FragTrainer(BaseTrainer):
             self.clip_grad_callback(i)
         self.opt.step()
         self.opt.zero_grad()
-        self.opt_Z.step()
-        self.opt_Z.zero_grad()
         self.lr_sched.step()
-        self.lr_sched_Z.step()
         if self.sampling_tau > 0:
             for a, b in zip(self.model_.parameters(), self.sampling_model_.parameters()):
                 b.data.mul_(self.sampling_tau).add_(a.data * (1 - self.sampling_tau))
 
     def setup_algo(self):
         hps = self.hps
-        if hps['algo'] == 'TB':
-            self.algo_ = TrajectoryBalance(self.env_, self.ctx_, self.rng, hps, max_nodes=9)
+        if hps['algo'] == 'SUBTB':
+            self.algo_ = SubTrajectoryBalance(self.env_, self.ctx_, self.rng, hps, max_nodes=9)
         else:
-            raise ValueError("Only supports TB rn, sorry.")
+            raise ValueError("Only supports SUBTB rn, sorry.")
 
     def setup_task(self):
         self.task_ = DrugExV2Task(self.training_data_, self.hps['temperature_sample_dist'],
@@ -170,7 +166,7 @@ class DrugExV2FragTrainer(BaseTrainer):
 
     def setup_model(self):
         model = FragBasedGraphGFN(self.ctx_, num_emb=self.hps['num_emb'], num_layers=self.hps['num_layers'],
-                                  estimate_init_state_flow=True)
+                                  estimate_init_state_flow=False)
         self.model_ = model
 
     def build_callbacks(self):
@@ -198,19 +194,19 @@ class DrugExV2FragTrainer(BaseTrainer):
             'temperature_sample_dist': 'uniform',
             'temperature_dist_params': '(96, 96)',
             'weight_decay': 1e-8,
-            'num_data_loader_workers': 4,
+            'num_data_loader_workers': 2,
             'momentum': 0.9,
             'adam_eps': 1e-8,
             'lr_decay': 20_000,
             'Z_lr_decay': 20_000,
             'clip_grad_type': 'norm',
             'clip_grad_param': 10,
-            'random_action_prob': 0.5,
+            'random_action_prob': 0.0,
             'num_cond_dim': 32 + NUM_PREFS,
             'sampling_tau': 0.0,
             'seed': 0,
             'preference_type': 'seeded_many',
-            'algo': 'TB',
+            'algo': 'SUBTB',
             'log_dir': str(here() / f'logs/moo/delete_this/'),
             'num_training_steps': 10_000,
             'validate_every': 250,
@@ -220,7 +216,7 @@ class DrugExV2FragTrainer(BaseTrainer):
 
 
 def main():
-    device = "cuda"
+    device = "cpu"
     trial = DrugExV2FragTrainer({}, torch.device(device))
     trial.verbose = True
     trial.run()

@@ -3,19 +3,19 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-from globals import device
-from rxitect import tensor_utils
-from rxitect.structs.vocabulary import SelfiesVocabulary
+from rxitect.classic.utils import tensor_utils
+from rxitect.classic.utils.vocabulary import SelfiesVocabulary
 
 
-class VanillaGenerator(nn.Module):
+class GeneratorRNN(nn.Module):
     def __init__(
         self,
         voc: SelfiesVocabulary,
-        embed_size=128,
-        hidden_size=512,
-        is_lstm=True,
-        lr=1e-3,
+        embed_size: int = 128,
+        hidden_size: int = 512,
+        is_lstm: bool = True,
+        lr: float = 1e-3,
+        device: str = "cpu"
     ):
         super().__init__()
         self.voc = voc
@@ -29,6 +29,7 @@ class VanillaGenerator(nn.Module):
         self.rnn = rnn_layer(embed_size, hidden_size, num_layers=3, batch_first=True)
         self.linear = nn.Linear(hidden_size, voc.size)
         self.optim = optim.Adam(self.parameters(), lr=lr)
+        self.device = device
         self.to(device)
 
     def forward(self, input, h):
@@ -38,18 +39,18 @@ class VanillaGenerator(nn.Module):
         return output, h_out
 
     def init_h(self, batch_size, labels=None):
-        h = torch.rand(3, batch_size, 512).to(device)
+        h = torch.rand(3, batch_size, 512, device=self.device)
         if labels is not None:
             h[0, batch_size, 0] = labels
         if self.is_lstm:
-            c = torch.rand(3, batch_size, self.hidden_size).to(device)
+            c = torch.rand(3, batch_size, self.hidden_size, device=self.device)
         return (h, c) if self.is_lstm else h
 
     def likelihood(self, target):
         batch_size, seq_len = target.size()
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(device)
+        x = torch.tensor([self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device)
         h = self.init_h(batch_size)
-        scores = torch.zeros(batch_size, seq_len).to(device)
+        scores = torch.zeros(batch_size, seq_len, device=self.device)
         for step in range(seq_len):
             logits, h = self(x, h)
             logits = logits.log_softmax(dim=-1)
@@ -68,10 +69,10 @@ class VanillaGenerator(nn.Module):
             self.optim.step()
 
     def sample(self, batch_size):
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(device)
+        x = torch.tensor([self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device)
         h = self.init_h(batch_size)
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(device)
-        isEnd = torch.zeros(batch_size).bool().to(device)
+        sequences = torch.zeros(batch_size, self.voc.max_len, dtype=torch.long, device=self.device)
+        isEnd = torch.zeros(batch_size, dtype=torch.bool, device=self.device)
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
@@ -86,79 +87,6 @@ class VanillaGenerator(nn.Module):
                 break
         return sequences
 
-    def evolve(self, batch_size, epsilon=0.01, crover=None, mutate=None):
-        # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(device)
-        # Hidden states initialization for exploitation network
-        h = self.init_h(batch_size)
-        # Hidden states initialization for exploration network
-        h1 = self.init_h(batch_size)
-        h2 = self.init_h(batch_size)
-        # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(device)
-        # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool().to(device)
-
-        for step in range(self.voc.max_len):
-            logit, h = self(x, h)
-            proba = logit.softmax(dim=-1)
-            if crover is not None:
-                ratio = torch.rand(batch_size, 1).to(device)
-                logit1, h1 = crover(x, h1)
-                proba = proba * ratio + logit1.softmax(dim=-1) * (1 - ratio)
-            if mutate is not None:
-                logit2, h2 = mutate(x, h2)
-                is_mutate = (torch.rand(batch_size) < epsilon).to(device)
-                proba[is_mutate, :] = logit2.softmax(dim=-1)[is_mutate, :]
-            # sampling based on output probability distribution
-            x = torch.multinomial(proba, 1).view(-1)
-
-            is_end |= x == self.voc.tk2ix["EOS"]
-            x[is_end] = self.voc.tk2ix["EOS"]
-            sequences[:, step] = x
-            if is_end.all():
-                break
-        return sequences
-
-    def evolve1(self, batch_size, epsilon=0.01, crover=None, mutate=None):
-        # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(device)
-        # Hidden states initialization for exploitation network
-        h = self.init_h(batch_size)
-        # Hidden states initialization for exploration network
-        h2 = self.init_h(batch_size)
-        # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(device)
-        # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool().to(device)
-
-        for step in range(self.voc.max_len):
-            is_change = torch.rand(1) < 0.5
-            if crover is not None and is_change:
-                logit, h = crover(x, h)
-            else:
-                logit, h = self(x, h)
-            proba = logit.softmax(dim=-1)
-            if mutate is not None:
-                logit2, h2 = mutate(x, h2)
-                ratio = torch.rand(batch_size, 1).to(device) * epsilon
-                proba = (
-                    logit.softmax(dim=-1) * (1 - ratio) + logit2.softmax(dim=-1) * ratio
-                )
-            # sampling based on output probability distribution
-            x = torch.multinomial(proba, 1).view(-1)
-
-            x[is_end] = self.voc.tk2ix["EOS"]
-            sequences[:, step] = x
-
-            # Judging whether samples are end or not.
-            end_token = x == self.voc.tk2ix["EOS"]
-            is_end = torch.ge(is_end + end_token, 1)
-            #  If all of the samples generation being end, stop the sampling process
-            if (is_end == 1).all():
-                break
-        return sequences
-
     def fit(self, loader_train, out, loader_valid=None, epochs=100, lr=1e-3):
         optimizer = optim.Adam(self.parameters(), lr=lr)
         log = open(out + ".log", "w")
@@ -166,7 +94,7 @@ class VanillaGenerator(nn.Module):
         for epoch in range(epochs):
             for i, batch in enumerate(loader_train):
                 optimizer.zero_grad()
-                loss_train = self.likelihood(batch.to(device))
+                loss_train = self.likelihood(batch.to(self.device))
                 loss_train = -loss_train.mean()
                 loss_train.backward()
                 optimizer.step()
@@ -184,10 +112,10 @@ class VanillaGenerator(nn.Module):
                     )
                     if loader_valid is not None:
                         loss_valid, size = 0, 0
-                        for j, batch in enumerate(loader_valid):
-                            size += batch.size(0)
+                        for j, vbatch in enumerate(loader_valid):
+                            size += vbatch.size(0)
                             loss_valid += (
-                                -self.likelihood(batch.to(device)).sum().item()
+                                -self.likelihood(vbatch.to(self.device)).sum().item()
                             )
                         loss_valid = loss_valid / size / self.voc.max_len
                         if loss_valid < best_error:
@@ -198,6 +126,6 @@ class VanillaGenerator(nn.Module):
                         torch.save(self.state_dict(), out + ".pkg")
                         best_error = error
                     print(info, file=log)
-                    for i, smile in enumerate(smiles):
-                        print("%d\t%s" % (valids[i], smile), file=log)
+                    for k, smile in enumerate(smiles):
+                        print("%d\t%s" % (valids[k], smile), file=log)
         log.close()

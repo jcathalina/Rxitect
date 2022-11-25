@@ -1,0 +1,52 @@
+sampling_model:
+  learning_rate: 5e-4
+  weight_decay: 0.0
+  minibatch_size: 4
+  num_emb: 256
+  min_steps: 2
+  max_steps: 8
+  num_train_steps: 10000
+  num_convs: 10
+  init_logZ: 30
+
+#parser.add_argument("--learning_rate", default=5e-4, help="Learning rate", type=float)
+#parser.add_argument("--mbsize", default=4, help="Minibatch size", type=int)
+#parser.add_argument("--opt_beta", default=0.9, type=float)
+#parser.add_argument("--opt_beta2", default=0.999, type=float)
+#parser.add_argument("--opt_epsilon", default=1e-8, type=float)
+#parser.add_argument("--nemb", default=256, help="#hidden", type=int)
+#parser.add_argument("--min_blocks", default=2, type=int)
+#parser.add_argument("--max_blocks", default=8, type=int)
+#parser.add_argument("--num_iterations", default=250000, type=int)
+#parser.add_argument("--num_conv_steps", default=10, type=int)
+#parser.add_argument("--log_reg_c", default=2.5e-5, type=float)
+#parser.add_argument("--reward_exp", default=10, type=float)
+#parser.add_argument("--reward_norm", default=8, type=float)
+#parser.add_argument("--sample_prob", default=1, type=float)
+#parser.add_argument("--R_min", default=0.1, type=float)
+#parser.add_argument("--leaf_coef", default=10, type=float)
+#parser.add_argument("--clip_grad", default=0, type=float)
+#parser.add_argument("--clip_loss", default=0, type=float)
+#parser.add_argument("--replay_mode", default='online', type=str)
+#parser.add_argument("--bootstrap_tau", default=0, type=float)
+#parser.add_argument("--weight_decay", default=0, type=float)
+#parser.add_argument("--random_action_prob", default=0.05, type=float)
+#parser.add_argument("--array", default='')
+#parser.add_argument("--repr_type", default='block_graph')
+#parser.add_argument("--model_version", default='v4')
+#parser.add_argument("--run", default=0, help="run", type=int)
+#parser.add_argument("--save_path", default='results/')
+#parser.add_argument("--proxy_path", default='./data/pretrained_proxy')
+#parser.add_argument("--print_array_length", default=False, action='store_true')
+#parser.add_argument("--progress", default='yes')
+#parser.add_argument("--floatX", default='float64')
+#parser.add_argument("--include_nblocks", default=False)
+#parser.add_argument("--balanced_loss", default=True)
+#parser.add_argument("--early_stop_reg", default=0.1, type=float)
+#parser.add_argument("--initial_log_Z", default=30, type=float)
+#parser.add_argument("--objective", default='fm', type=str)
+# If True this basically implements Buesing et al's TreeSample Q/SoftQLearning, samples uniformly
+# from it though, no MCTS involved
+#parser.add_argument("--ignore_parents", default=False)
+#
+#parser.add_argument("--subtb_lambda", default=0.99, type=float)

@@ -1,0 +1,8 @@
+resume: False
+path_to_checkpoint: None
+epochs: 100
+device: "cuda"
+validate_every_n_epochs: 50
+fast_dev_run: False
+num_workers: 4
+batch_size: 128
