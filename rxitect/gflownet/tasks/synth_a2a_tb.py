@@ -7,7 +7,6 @@ import torch
 from pyprojroot import here
 from rdkit import RDLogger
 from rdkit.Chem import Mol
-from scipy.stats import stats
 from torch import nn
 from torch.distributions import Dirichlet
 from torch.utils.data import Dataset
@@ -91,7 +90,7 @@ class SynthA2ATask(IGraphTask):
 
         a2a_score_preds = self.models['a2a'](enhanced_fps)
         a2a_score_preds = torch.from_numpy(a2a_score_preds.astype(np.float32))
-        a2a_scores = a2a_score_preds / 9.0  # 95pth percentile for A2A pChEMBL values is 9, so most will be [0-1]
+        a2a_scores = (a2a_score_preds / 8.8).clamp(0, 1)  # 95th percentile for A2A pChEMBL values is 8.8, so most will be [0-1]
 
         ra_scores = self.models['rascore'](fcfps)  # is already between 0-1, no need to normalize
         ra_scores = ra_scores.reshape(-1).detach().cpu()
@@ -109,8 +108,8 @@ class DrugExV2FragTrainer(BaseTrainer):
         hps = self.hps
         RDLogger.DisableLog('rdApp.*')
         self.rng = np.random.default_rng(142857)
-        self.env_ = GraphBuildingEnv()
         self.ctx_ = FragBasedGraphContext(max_frags=9, num_cond_dim=hps['num_cond_dim'])
+        self.env_ = GraphBuildingEnv(ctx=self.ctx_)
         self.training_data_ = []
         self.test_data_ = []
         self.offline_ratio = 0
@@ -213,7 +212,7 @@ class DrugExV2FragTrainer(BaseTrainer):
             'illegal_action_logreward': -75,
             'reward_loss_multiplier': 1,
             'temperature_sample_dist': 'uniform',
-            'temperature_dist_params': '(32, 32)',
+            'temperature_dist_params': '(96, 96)',
             'weight_decay': 1e-8,
             'num_data_loader_workers': 8,
             'momentum': 0.9,
@@ -228,8 +227,8 @@ class DrugExV2FragTrainer(BaseTrainer):
             'seed': 0,
             'preference_type': 'seeded_many',
             'algo': 'TB',
-            'log_dir': str(here() / f'logs/moo/synth_a2a_tb/'),
-            'num_training_steps': 10_000,
+            'log_dir': str(here() / f'logs/mogfn/synth_a2a_tb_beta_96/'),
+            'num_training_steps': 5_000,
             'validate_every': 250,
             'valid_sample_cond_info': False,
             'mask_invalid_rewards': False,

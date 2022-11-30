@@ -12,6 +12,8 @@ from torch import nn
 from torch.distributions import Dirichlet
 from torch.utils.data import Dataset
 
+from rxitect.gflownet.algorithms.a2c import A2C
+from rxitect.gflownet.algorithms.reinforce import REINFORCE
 from rxitect.gflownet.algorithms.trajectory_balance import TrajectoryBalance
 from rxitect.gflownet.base_trainer import BaseTrainer
 from rxitect.gflownet.contexts.envs.graph_building_env import GraphBuildingEnv
@@ -172,10 +174,10 @@ class DrugExV2FragTrainer(BaseTrainer):
 
     def setup_algo(self):
         hps = self.hps
-        if hps['algo'] == 'TB':
-            self.algo_ = TrajectoryBalance(self.env_, self.ctx_, self.rng, hps, max_nodes=9)
+        if hps['algo'] == 'REINFORCE':
+            self.algo_ = REINFORCE(self.env_, self.ctx_, self.rng, hps, max_nodes=9)
         else:
-            raise ValueError("Only supports TB rn, sorry.")
+            raise ValueError("Only supports A2C rn, sorry.")
 
     def setup_task(self):
         self.task_ = DrugExV2Task(self.training_data_, self.hps['temperature_sample_dist'],
@@ -209,7 +211,7 @@ class DrugExV2FragTrainer(BaseTrainer):
             'illegal_action_logreward': -75,
             'reward_loss_multiplier': 1,
             'temperature_sample_dist': 'uniform',
-            'temperature_dist_params': '(96, 96)',
+            'temperature_dist_params': '(1, 1)',
             'weight_decay': 1e-8,
             'num_data_loader_workers': 8,
             'momentum': 0.9,
@@ -220,11 +222,11 @@ class DrugExV2FragTrainer(BaseTrainer):
             'clip_grad_param': 10,
             'random_action_prob': 0.05,
             'num_cond_dim': 32 + NUM_PREFS,
-            'sampling_tau': 0.95,
+            'sampling_tau': 0.0,
             'seed': 0,
             'preference_type': 'seeded_many',
-            'algo': 'TB',
-            'log_dir': str(here() / f'logs/mogfn/drugex_v2_tb_beta_96_lr_5e-4/'),
+            'algo': 'REINFORCE',
+            'log_dir': str(here() / f'logs/mogfn/drugex_v2_reinforce_beta_96_lr_5e-4/'),
             'num_training_steps': 5_000,
             'validate_every': 250,
             'valid_sample_cond_info': False,

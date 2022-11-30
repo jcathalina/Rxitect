@@ -23,12 +23,14 @@ from rxitect.gflownet.tasks.interfaces.graph_task import IGraphTask
 from rxitect.gflownet.utils import metrics
 from rxitect.gflownet.utils.multiproc import MPModelPlaceholder
 from rxitect.gflownet.utils.types import FlatRewards
+from rxitect.scorers import sascore, rascore
 from rxitect.scorers.a2ascore import Predictor
+from rxitect.scorers.rascore import load_rascore_model
 
-NUM_PREFS = 3
+NUM_PREFS = 5
 
 
-class DrugExV2Task(IGraphTask):
+class DrugExV2SynthTask(IGraphTask):
     def __init__(self, dataset: Dataset, temperature_distribution: str, temperature_parameters: Tuple[float],
                  wrap_model: Callable[[nn.Module], nn.Module] = None) -> None:
         self._wrap_model = wrap_model
@@ -44,6 +46,8 @@ class DrugExV2Task(IGraphTask):
         return FlatRewards(torch.as_tensor(y))
 
     def _load_task_models(self) -> Dict[str, MPModelPlaceholder]:
+        rascore = load_rascore_model(ckpt_filepath=here() / "models/rascore_26102022.ckpt", device="cuda")
+        rascore, self.device = self._wrap_model(rascore)
         a2a = Predictor(path=here() / "models/RF_REG_CHEMBL251.pkg")
         a1 = Predictor(path=here() / "models/RF_REG_CHEMBL226.pkg")
         herg = Predictor(path=here() / "models/RF_REG_CHEMBL240.pkg")
@@ -52,7 +56,8 @@ class DrugExV2Task(IGraphTask):
         herg.model.n_jobs = 1
         return {'a2a': a2a,
                 'a1': a1,
-                'herg': herg}
+                'herg': herg,
+                'rascore': rascore}
 
     def sample_conditional_information(self, n: int) -> Dict[str, torch.Tensor]:
         beta = None
@@ -77,6 +82,15 @@ class DrugExV2Task(IGraphTask):
         }
 
     def compute_flat_rewards(self, mols: List[Mol]) -> Tuple[FlatRewards, torch.Tensor]:
+
+        def safe(f, x, default):
+            try:
+                return f(x)
+            except Exception as e:
+                print(f"The following exception occurred for function {f}: {e}. Return default.")
+                return default
+
+        fcfps = torch.tensor(np.array([rascore.mol2fcfp(i) for i in mols]), dtype=torch.float, device=self.device)
         enhanced_fps = Predictor.calc_fp(mols=mols)
         is_valid = torch.tensor([i is not None for i in enhanced_fps]).bool()
         if not is_valid.any():
@@ -95,7 +109,13 @@ class DrugExV2Task(IGraphTask):
         a1s = (a1score_preds / 8.6).clamp(0, 1)  # 95pth percentile for A1 pChEMBL values is 8.6, so most will be [0-1]
         hergs = 1.0 - (hergscore_preds / 7.4).clamp(0, 1)  # 95pth percentile for hERG pChEMBL values is 7.4, so most will be [0-1]
 
-        flat_rewards = torch.stack([a2as, a1s, hergs], 1)
+        ra_scores = self.models['rascore'](fcfps)  # is already between 0-1, no need to normalize
+        ra_scores = ra_scores.reshape(-1).detach().cpu()
+
+        sa_scores = torch.tensor([safe(sascore.calculateScore, i, 10) for i, v in zip(mols, is_valid) if v.item()])
+        sa_scores = (10 - sa_scores) / 9  # transform to [0-1]
+
+        flat_rewards = torch.stack([a2as, a1s, hergs, ra_scores, sa_scores], 1)
 
         return FlatRewards(flat_rewards), is_valid
 
@@ -178,7 +198,7 @@ class DrugExV2FragTrainer(BaseTrainer):
             raise ValueError("Only supports TB rn, sorry.")
 
     def setup_task(self):
-        self.task_ = DrugExV2Task(self.training_data_, self.hps['temperature_sample_dist'],
+        self.task_ = DrugExV2SynthTask(self.training_data_, self.hps['temperature_sample_dist'],
                                   ast.literal_eval(self.hps['temperature_dist_params']), wrap_model=self._wrap_model_mp)
 
     def setup_model(self):
@@ -224,7 +244,7 @@ class DrugExV2FragTrainer(BaseTrainer):
             'seed': 0,
             'preference_type': 'seeded_many',
             'algo': 'TB',
-            'log_dir': str(here() / f'logs/mogfn/drugex_v2_tb_beta_96_lr_5e-4/'),
+            'log_dir': str(here() / f'logs/mogfn/drugex_synth_v2_tb_beta_96_lr_5e-4/'),
             'num_training_steps': 5_000,
             'validate_every': 250,
             'valid_sample_cond_info': False,

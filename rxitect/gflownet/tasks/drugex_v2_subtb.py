@@ -89,9 +89,9 @@ class DrugExV2Task(IGraphTask):
         a1score_preds = torch.from_numpy(a1score_preds.astype(np.float32))
         hergscore_preds = torch.from_numpy(hergscore_preds.astype(np.float32))
 
-        a2as = a2ascore_preds / 9.0  # 95pth percentile for A2A pChEMBL values is 9, so most will be [0-1]
-        a1s = a1score_preds / 9.0  # 95pth percentile for A1 pChEMBL values is 9, so most will be [0-1]
-        hergs = 1.0 - (hergscore_preds / 9.0)  # 95pth percentile for hERG pChEMBL values is 9, so most will be [0-1]
+        a2as = (a2ascore_preds / 8.8).clamp(0, 1)  # 95th percentile for A2A pChEMBL values is 8.8, so most will be [0-1]
+        a1s = (a1score_preds / 8.6).clamp(0, 1)  # 95pth percentile for A1 pChEMBL values is 8.6, so most will be [0-1]
+        hergs = 1.0 - (hergscore_preds / 7.4).clamp(0, 1)  # 95pth percentile for hERG pChEMBL values is 7.4, so most will be [0-1]
 
         flat_rewards = torch.stack([a2as, a1s, hergs], 1)
 
@@ -103,8 +103,8 @@ class DrugExV2FragTrainer(BaseTrainer):
         hps = self.hps
         RDLogger.DisableLog('rdApp.*')
         self.rng = np.random.default_rng(142857)
-        self.env_ = GraphBuildingEnv()
         self.ctx_ = FragBasedGraphContext(max_frags=9, num_cond_dim=hps['num_cond_dim'])
+        self.env_ = GraphBuildingEnv(ctx=self.ctx_)
         self.training_data_ = []
         self.test_data_ = []
         self.offline_ratio = 0
@@ -194,7 +194,7 @@ class DrugExV2FragTrainer(BaseTrainer):
     def default_hps(self) -> Dict[str, Any]:
         return {
             'bootstrap_own_reward': False,
-            'learning_rate': 1e-4,
+            'learning_rate': 5e-4,
             'global_batch_size': 128,
             'num_emb': 128,
             'num_layers': 6,
@@ -202,9 +202,9 @@ class DrugExV2FragTrainer(BaseTrainer):
             'illegal_action_logreward': -75,
             'reward_loss_multiplier': 1,
             'temperature_sample_dist': 'uniform',
-            'temperature_dist_params': '(32, 32)',
+            'temperature_dist_params': '(96, 96)',
             'weight_decay': 1e-8,
-            'num_data_loader_workers': 4,
+            'num_data_loader_workers': 8,
             'momentum': 0.9,
             'adam_eps': 1e-8,
             'lr_decay': 20_000,
@@ -212,15 +212,15 @@ class DrugExV2FragTrainer(BaseTrainer):
             'clip_grad_param': 10,
             'random_action_prob': 0.05,
             'num_cond_dim': 32 + NUM_PREFS,
-            'sampling_tau': 0.0,
+            'sampling_tau': 0.95,
             'seed': 0,
             'preference_type': 'seeded_many',
             'algo': 'SUBTB',
-            'log_dir': str(here() / f'logs/moo/drugex_v2_subtb/'),
-            'num_training_steps': 10_000,
+            'log_dir': str(here() / f'logs/mogfn/drugex_v2_subtb_beta_96_lr_5e-4/'),
+            'num_training_steps': 5_000,
             'validate_every': 250,
             'valid_sample_cond_info': False,
-            'lambda': 0.99
+            'lambda': 1.0
         }
 
 
